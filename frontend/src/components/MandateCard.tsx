@@ -3,6 +3,7 @@ import { formatUnits, type Address } from "viem";
 import { abis } from "../lib/contracts";
 import { getAddresses } from "../lib/addresses";
 import { useActiveChainId } from "../lib/useActiveChainId";
+import { Card } from "./Card";
 
 type Props = {
   agent: Address;
@@ -29,10 +30,26 @@ export function MandateCard({ agent }: Props) {
     query: { enabled: !!mandate?.homeCurrency },
   });
 
-  if (!addresses) return <Card title="Mandate">Connect to a network with Covenant deployed.</Card>;
-  if (isLoading) return <Card title="Mandate">Loading...</Card>;
+  if (!addresses) {
+    return (
+      <Card title="Mandate" layer="Layer 1" index={0}>
+        Connect to a network with Covenant deployed.
+      </Card>
+    );
+  }
+  if (isLoading) {
+    return (
+      <Card title="Mandate" layer="Layer 1" index={0}>
+        <div className="skeleton-block" />
+      </Card>
+    );
+  }
   if (!mandate || mandate.principal === "0x0000000000000000000000000000000000000000") {
-    return <Card title="Mandate">No mandate found for this agent.</Card>;
+    return (
+      <Card title="Mandate" layer="Layer 1" index={0}>
+        No mandate found for this agent.
+      </Card>
+    );
   }
 
   const d = decimals ?? 6;
@@ -44,7 +61,7 @@ export function MandateCard({ agent }: Props) {
   const expired = now > validUntil.getTime();
 
   return (
-    <Card title="Mandate">
+    <Card title="Mandate" layer="Layer 1" index={0}>
       <div className="status-row">
         <StatusPill label={mandate.active ? "Active" : "Manually frozen"} tone={mandate.active ? "good" : "bad"} />
         <StatusPill label={expired ? "Expired" : "Within validity window"} tone={expired ? "bad" : "good"} />
@@ -90,13 +107,4 @@ function LimitBar({ label, spent, cap, fmt }: { label: string; spent: bigint; ca
 
 function StatusPill({ label, tone }: { label: string; tone: "good" | "bad" }) {
   return <span className={`pill pill-${tone}`}>{label}</span>;
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="card">
-      <h2>{title}</h2>
-      {children}
-    </section>
-  );
 }

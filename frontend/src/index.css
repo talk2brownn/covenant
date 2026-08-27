@@ -1,15 +1,31 @@
 :root {
   color-scheme: dark;
-  --bg: #0b0d12;
-  --panel: #12151c;
-  --panel-border: #232733;
-  --text: #e6e8ee;
-  --text-dim: #8b93a7;
-  --accent: #5b8cff;
+
+  --bg: #08090d;
+  --bg-elevated: #0e1016;
+  --panel: #12141c;
+  --panel-border: #23273499;
+  --panel-border-solid: #232734;
+  --text: #eef0f6;
+  --text-dim: #8d93a8;
+  --text-faint: #565c70;
+
+  --accent: #6d8bff;
+  --accent-2: #a78bfa;
+  --accent-gradient: linear-gradient(120deg, var(--accent), var(--accent-2));
+
   --good: #3ecf8e;
-  --warn: #e8b93e;
-  --bad: #e85d5d;
-  font-family: "Inter", system-ui, -apple-system, Segoe UI, sans-serif;
+  --good-glow: rgba(62, 207, 142, 0.45);
+  --warn: #f0b93e;
+  --warn-glow: rgba(240, 185, 62, 0.45);
+  --bad: #f2596b;
+  --bad-glow: rgba(242, 89, 107, 0.45);
+
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  font-family: var(--font-body);
 }
 
 * {
@@ -18,6 +34,46 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse 900px 500px at 12% -10%, rgba(109, 139, 255, 0.16), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(167, 139, 250, 0.12), transparent 55%),
+    var(--bg);
   color: var(--text);
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(109, 139, 255, 0.35);
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes softPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }

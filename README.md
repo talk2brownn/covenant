@@ -22,7 +22,9 @@ forge test
 Deploy locally against Anvil:
 
 ```bash
-anvil                                    # in one terminal
+# --state persists chain state to disk (loads it back on next start, dumps on exit and every
+# 15s) so a restart doesn't wipe out demo mandates/balances. Delete anvil-state.json for a clean slate.
+anvil --state anvil-state.json --state-interval 15   # in one terminal
 cp .env.example .env                     # fill in DEPLOYER_PRIVATE_KEY (use an Anvil test key locally)
 forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```

@@ -3,6 +3,7 @@ import type { Address } from "viem";
 import { abis, KILL_SWITCH_STATUS } from "../lib/contracts";
 import { getAddresses } from "../lib/addresses";
 import { useActiveChainId } from "../lib/useActiveChainId";
+import { Card } from "./Card";
 
 type Props = {
   agent: Address;
@@ -44,9 +45,9 @@ export function AutonomyMeter({ agent }: Props) {
     );
 
   return (
-    <section className="card">
-      <h2>Autonomy</h2>
+    <Card title="Autonomy" layer="Layer 6" accent="dynamic" index={1}>
       <div className={`autonomy-badge autonomy-${tone}`}>
+        <span className="autonomy-ring" />
         <span className="autonomy-emoji">{EMOJI_BY_STATUS[statusIndex]}</span>
         <span>{label}</span>
       </div>
@@ -65,6 +66,6 @@ export function AutonomyMeter({ agent }: Props) {
           Restore to Restricted
         </button>
       </div>
-    </section>
+    </Card>
   );
 }

@@ -7,6 +7,7 @@ import { MandateCard } from "./components/MandateCard";
 import { AutonomyMeter } from "./components/AutonomyMeter";
 import { PaymentPanel } from "./components/PaymentPanel";
 import { AuditTrail } from "./components/AuditTrail";
+import { PipelineStrip } from "./components/PipelineStrip";
 
 function App() {
   const [agent, setAgent] = useState<Address | undefined>(undefined);
@@ -20,6 +21,8 @@ function App() {
         </div>
         <ConnectWallet />
       </header>
+
+      <PipelineStrip />
 
       <AgentSelector agent={agent} onChange={setAgent} />
 

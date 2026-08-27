@@ -4,6 +4,7 @@ import { formatUnits, type Address } from "viem";
 import { abis } from "../lib/contracts";
 import { getAddresses } from "../lib/addresses";
 import { useActiveChainId } from "../lib/useActiveChainId";
+import { Card } from "./Card";
 
 type Props = {
   agent: Address;
@@ -91,18 +92,21 @@ export function AuditTrail({ agent }: Props) {
   if (!addresses) return null;
 
   return (
-    <section className="card">
-      <h2>Audit Trail</h2>
+    <Card title="Audit Trail" layer="On-chain record" accent="teal" index={3}>
       {entries.length === 0 && <p className="hint">No settlements or denials recorded yet.</p>}
       <ul className="audit-list">
-        {entries.map((entry) => (
-          <li key={entry.key} className={entry.kind === "settled" ? "audit-settled" : "audit-denied"}>
+        {entries.map((entry, i) => (
+          <li
+            key={entry.key}
+            className={entry.kind === "settled" ? "audit-settled" : "audit-denied"}
+            style={{ animationDelay: `${i * 40}ms` }}
+          >
             <span className="audit-kind">{entry.kind === "settled" ? "Settled" : "Denied"}</span>
             <span className="mono">{entry.counterparty.slice(0, 8)}...</span>
             <span>{entry.detail}</span>
           </li>
         ))}
       </ul>
-    </section>
+    </Card>
   );
 }

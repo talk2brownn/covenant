@@ -2,6 +2,7 @@
 contracts/cache/
 contracts/out/
 contracts/broadcast/*/31337/
+contracts/anvil-state.json
 # contracts/lib/ is intentionally tracked (vendored deps, installed without git submodules)
 
 # Env / secrets

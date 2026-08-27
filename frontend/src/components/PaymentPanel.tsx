@@ -4,6 +4,8 @@ import { formatUnits, isAddress, keccak256, parseUnits, toBytes, type Address } 
 import { abis, CHECK_LABELS } from "../lib/contracts";
 import { getAddresses } from "../lib/addresses";
 import { useActiveChainId } from "../lib/useActiveChainId";
+import { Card } from "./Card";
+import { CheckIcon, CrossIcon } from "./icons";
 
 type Props = {
   agent: Address;
@@ -82,8 +84,7 @@ export function PaymentPanel({ agent }: Props) {
   const canSend = !!decision?.approved && !needsApproval && !!addresses;
 
   return (
-    <section className="card">
-      <h2>Send a Payment</h2>
+    <Card title="Send a Payment" layer="Layer 2–5" accent="violet" index={2}>
       <div className="form-grid">
         <label>
           Counterparty
@@ -110,8 +111,8 @@ export function PaymentPanel({ agent }: Props) {
           <h3>Constraint checklist</h3>
           <ul className="checklist">
             {decision.checklist.map((check, i) => (
-              <li key={i} className={check.passed ? "check-pass" : "check-fail"}>
-                <span className="check-icon">{check.passed ? "✓" : "✗"}</span>
+              <li key={i} className={check.passed ? "check-pass" : "check-fail"} style={{ animationDelay: `${i * 45}ms` }}>
+                <span className="check-icon">{check.passed ? <CheckIcon /> : <CrossIcon />}</span>
                 <span className="check-label">{CHECK_LABELS[i]}</span>
                 <span className="check-detail">{check.detail}</span>
               </li>
@@ -177,7 +178,7 @@ export function PaymentPanel({ agent }: Props) {
           Settled in block {receipt.blockNumber.toString()}. Check the audit trail below for the final outcome.
         </p>
       )}
-    </section>
+    </Card>
   );
 }
 
