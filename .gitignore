@@ -1,0 +1,22 @@
+# Foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/*/31337/
+# contracts/lib/ is intentionally tracked (vendored deps, installed without git submodules)
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Node / frontend
+node_modules/
+dist/
+.next/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# OS / editor
+.DS_Store
+*.log

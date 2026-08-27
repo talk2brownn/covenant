@@ -1,0 +1,102 @@
+import { useReadContract } from "wagmi";
+import { formatUnits, type Address } from "viem";
+import { abis } from "../lib/contracts";
+import { getAddresses } from "../lib/addresses";
+import { useActiveChainId } from "../lib/useActiveChainId";
+
+type Props = {
+  agent: Address;
+};
+
+export function MandateCard({ agent }: Props) {
+  const chainId = useActiveChainId();
+  const addresses = getAddresses(chainId);
+
+  const { data: mandate, isLoading } = useReadContract({
+    chainId,
+    address: addresses?.mandateRegistry,
+    abi: abis.mandateRegistry,
+    functionName: "getMandate",
+    args: [agent],
+    query: { enabled: !!addresses, refetchInterval: 5000 },
+  });
+
+  const { data: decimals } = useReadContract({
+    chainId,
+    address: mandate?.homeCurrency,
+    abi: abis.erc20,
+    functionName: "decimals",
+    query: { enabled: !!mandate?.homeCurrency },
+  });
+
+  if (!addresses) return <Card title="Mandate">Connect to a network with Covenant deployed.</Card>;
+  if (isLoading) return <Card title="Mandate">Loading...</Card>;
+  if (!mandate || mandate.principal === "0x0000000000000000000000000000000000000000") {
+    return <Card title="Mandate">No mandate found for this agent.</Card>;
+  }
+
+  const d = decimals ?? 6;
+  const fmt = (v: bigint) => Number(formatUnits(v, d)).toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+  const validFrom = new Date(Number(mandate.validFrom) * 1000);
+  const validUntil = new Date(Number(mandate.validUntil) * 1000);
+  const now = Date.now();
+  const expired = now > validUntil.getTime();
+
+  return (
+    <Card title="Mandate">
+      <div className="status-row">
+        <StatusPill label={mandate.active ? "Active" : "Manually frozen"} tone={mandate.active ? "good" : "bad"} />
+        <StatusPill label={expired ? "Expired" : "Within validity window"} tone={expired ? "bad" : "good"} />
+      </div>
+
+      <LimitBar label="Total budget" spent={mandate.spentTotal} cap={mandate.totalBudget} fmt={fmt} />
+      <LimitBar label="Daily limit" spent={mandate.spentToday} cap={mandate.dailyLimit} fmt={fmt} />
+
+      <dl className="kv">
+        <dt>Per-transaction cap</dt>
+        <dd>{fmt(mandate.perTxLimit)}</dd>
+        <dt>Restricted-mode cap</dt>
+        <dd>{fmt(mandate.restrictedPerTxLimit)}</dd>
+        <dt>Max FX slippage</dt>
+        <dd>{(Number(mandate.maxSlippageBps) / 100).toFixed(2)}%</dd>
+        <dt>Valid</dt>
+        <dd>
+          {validFrom.toLocaleDateString()} - {validUntil.toLocaleDateString()}
+        </dd>
+        <dt>Principal</dt>
+        <dd className="mono">{mandate.principal}</dd>
+      </dl>
+    </Card>
+  );
+}
+
+function LimitBar({ label, spent, cap, fmt }: { label: string; spent: bigint; cap: bigint; fmt: (v: bigint) => string }) {
+  const pct = cap > 0n ? Math.min(100, Number((spent * 100n) / cap)) : 0;
+  return (
+    <div className="limit-bar">
+      <div className="limit-bar-label">
+        <span>{label}</span>
+        <span>
+          {fmt(spent)} / {fmt(cap)}
+        </span>
+      </div>
+      <div className="limit-bar-track">
+        <div className="limit-bar-fill" style={{ width: `${pct}%` }} data-danger={pct > 85} />
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({ label, tone }: { label: string; tone: "good" | "bad" }) {
+  return <span className={`pill pill-${tone}`}>{label}</span>;
+}
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="card">
+      <h2>{title}</h2>
+      {children}
+    </section>
+  );
+}
