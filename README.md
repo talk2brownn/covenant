@@ -2,7 +2,9 @@
 
 Machine-enforceable spending mandates for AI agents, settled atomically on Arc — same-currency or
 cross-currency — via a mocked StableFX-shaped FX escrow. See [docs/covenant-build-brief.md](docs/covenant-build-brief.md)
-for the full pitch, architecture, and scope rationale.
+for the full pitch, architecture, and scope rationale, and [docs/build-notes.md](docs/build-notes.md)
+for non-obvious decisions and gotchas hit while building it (denials-don't-revert, a controlled-input
+bug worth knowing about if you touch the agent selector, anvil state persistence caveats).
 
 ## Layout
 
