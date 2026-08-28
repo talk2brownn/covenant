@@ -3,12 +3,12 @@ import type { ReactNode } from "react";
 type Props = {
   title: string;
   layer?: string;
-  accent?: "blue" | "violet" | "teal" | "dynamic";
+  accent?: "gold" | "ledger" | "sepia" | "neutral";
   index?: number;
   children: ReactNode;
 };
 
-export function Card({ title, layer, accent = "blue", index = 0, children }: Props) {
+export function Card({ title, layer, accent = "gold", index = 0, children }: Props) {
   return (
     <section className={`card card-accent-${accent}`} style={{ animationDelay: `${index * 70}ms` }}>
       <div className="card-head">

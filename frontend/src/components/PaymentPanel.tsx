@@ -84,7 +84,7 @@ export function PaymentPanel({ agent }: Props) {
   const canSend = !!decision?.approved && !needsApproval && !!addresses;
 
   return (
-    <Card title="Send a Payment" layer="Layer 2–5" accent="violet" index={2}>
+    <Card title="Send a Payment" layer="Layer 2–5" accent="ledger" index={2}>
       <div className="form-grid">
         <label>
           Counterparty

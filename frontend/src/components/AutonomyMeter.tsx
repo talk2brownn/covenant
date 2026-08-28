@@ -45,9 +45,8 @@ export function AutonomyMeter({ agent }: Props) {
     );
 
   return (
-    <Card title="Autonomy" layer="Layer 6" accent="dynamic" index={1}>
+    <Card title="Autonomy" layer="Layer 6" accent="neutral" index={1}>
       <div className={`autonomy-badge autonomy-${tone}`}>
-        <span className="autonomy-ring" />
         <span className="autonomy-emoji">{EMOJI_BY_STATUS[statusIndex]}</span>
         <span>{label}</span>
       </div>

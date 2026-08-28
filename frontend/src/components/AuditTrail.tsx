@@ -92,7 +92,7 @@ export function AuditTrail({ agent }: Props) {
   if (!addresses) return null;
 
   return (
-    <Card title="Audit Trail" layer="On-chain record" accent="teal" index={3}>
+    <Card title="Audit Trail" layer="On-chain record" accent="sepia" index={3}>
       {entries.length === 0 && <p className="hint">No settlements or denials recorded yet.</p>}
       <ul className="audit-list">
         {entries.map((entry, i) => (
