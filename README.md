@@ -53,6 +53,16 @@ Read-only views (mandate status, autonomy meter, audit trail) work without a con
 they fall back to `VITE_DEFAULT_CHAIN_ID`. Sending a payment, approving the router, or triggering
 the kill-switch requires connecting a wallet on that same chain.
 
+## Status
+
+V1 is fully built and demoed end-to-end on local Anvil with a real connected wallet (MetaMask):
+direct payment, cross-currency atomic FX settlement, a clean policy denial, and a kill-switch
+freeze that then blocks a subsequent (otherwise valid) payment — the full demo script in the build
+brief (§9). Remaining before this is "done" beyond the local demo: deploy to Arc testnet (blocked
+on Arc's public RPC/chain id being available), and wire up real Circle developer-controlled
+wallets as the agent identity (currently any address that can call `SettlementRouter.settlePayment`
+works — we've only tested with a plain Anvil test account).
+
 ## What's mocked (V1) vs. real (V2)
 
 - **FX leg is mocked** (`MockFXEscrow`) behind the exact interface shape StableFX exposes

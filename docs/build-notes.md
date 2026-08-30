@@ -42,6 +42,25 @@ Running log of non-obvious decisions and gotchas hit while building Covenant V1.
   **General lesson: a controlled input whose displayed value is *derived/validated* rather than the
   raw typed string needs to be tested with real keystroke-by-keystroke typing, not a single
   value-set — the two can behave completely differently.**
+- **`PaymentPanel`'s preflight checklist can show stale results right after an on-chain state
+  change it didn't cause.** The `preflight` read has no `refetchInterval`, so it only re-runs when
+  its args (counterparty/category/token/amount) change. Freezing the kill-switch from the Autonomy
+  card doesn't touch those args, so the checklist can keep showing "Kill-switch not frozen: ok"
+  until something nudges the amount field. Cosmetic only — `settlePayment` itself always reads
+  fresh on-chain state — but worth adding a manual refetch trigger (or a shared invalidation on any
+  write) if this trips people up in a live demo.
+
+## Verifying a wallet-signing flow
+
+- **MetaMask's confirmation popup is invisible to `claude-in-chrome` browser automation.** Driving
+  `window.ethereum.request({method:'eth_requestAccounts'})` directly from a page script hung the
+  tab for 45+ seconds (CDP `Runtime.evaluate` timeout, "renderer may be frozen") — consistent with
+  a modal extension popup blocking the render thread with no way for automation to see or click
+  into it. The working split during verification: the agent fills in form fields and reads
+  on-chain state, but a human has to click the button that opens MetaMask and confirm/reject in the
+  extension themselves. Don't spend time trying to script past this — it isn't reachable from here.
+  (V1's full demo script — direct payment, cross-currency FX, denial, freeze, blocked-after-freeze
+  — was verified this way on 2026-08-29, split between automated setup and manual wallet confirms.)
 
 ## Local dev environment
 
