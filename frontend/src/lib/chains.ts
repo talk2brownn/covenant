@@ -1,5 +1,5 @@
 import { defineChain } from "viem";
-import { anvil } from "viem/chains";
+import { anvil, sepolia } from "viem/chains";
 
 // Arc's testnet chain id / RPC aren't public knowledge baked into viem yet, so this reads from
 // env vars (see .env.example) rather than hardcoding a value that could be wrong. Fill these in
@@ -15,6 +15,11 @@ export const arcTestnet = defineChain({
 });
 
 export const localAnvil = anvil;
+
+// Ethereum Sepolia — used as a public-testnet stand-in for Arc's testnet in demos, since Arc's
+// own testnet RPC/chain ID aren't available yet (see build brief §5, §8). Swap this out once
+// Arc testnet access lands; the contracts themselves are unaffected either way.
+export const sepoliaTestnet = sepolia;
 
 // Used for read-only views when no wallet is connected yet, so the dashboard is browsable
 // (and screenshot/demo-able) without requiring a connection first. Writes always go through

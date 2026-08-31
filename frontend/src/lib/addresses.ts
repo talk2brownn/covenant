@@ -22,6 +22,17 @@ export const addressesByChainId: Record<number, CovenantAddresses> = {
     usdc: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
     cngn: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
   },
+  // Ethereum Sepolia (chain id 11155111) — public-testnet stand-in for Arc testnet, used for the
+  // public demo link. From contracts/broadcast/Deploy.s.sol/11155111/run-latest.json
+  11155111: {
+    mandateRegistry: "0x1413981c976694E12C200985ed9f1D70cf2CAed9",
+    policyEngine: "0x303B31C60381B992f3dfc09036859394c03F6ADD",
+    killSwitch: "0x2600Fa1d3971E0992e0685795660C95774641e34",
+    fxEscrow: "0xAB2d7fFe480A4456965359e3209BA3FdD420f86A",
+    settlementRouter: "0xD8da95168Ba9eE8600c2373c853b664e207d7848",
+    usdc: "0x41A069bdB1fDE2b5ad54F2C96Cd38B5DA9e6808E",
+    cngn: "0x4220880B42Cc4EAE952078BC682B880D821C7b43",
+  },
 };
 
 export function getAddresses(chainId: number): CovenantAddresses | undefined {

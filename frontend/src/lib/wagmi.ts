@@ -1,10 +1,11 @@
 import { createConfig, http, injected } from "wagmi";
-import { arcTestnet, localAnvil } from "./chains";
+import { arcTestnet, localAnvil, sepoliaTestnet } from "./chains";
 
 export const wagmiConfig = createConfig({
-  chains: [localAnvil, arcTestnet],
+  chains: [sepoliaTestnet, localAnvil, arcTestnet],
   connectors: [injected()],
   transports: {
+    [sepoliaTestnet.id]: http(import.meta.env.VITE_SEPOLIA_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com"),
     [localAnvil.id]: http(),
     [arcTestnet.id]: http(import.meta.env.VITE_ARC_RPC_URL),
   },
