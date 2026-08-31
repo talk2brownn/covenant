@@ -9,6 +9,11 @@ export type CovenantAddresses = {
   settlementRouter: `0x${string}`;
   usdc: `0x${string}`;
   cngn: `0x${string}`;
+  // Block the stack was deployed at. Audit-trail event queries start here instead of block 0 —
+  // on a real public chain like Sepolia, `eth_getLogs` from genesis exceeds the block-range limit
+  // most public RPC nodes enforce (e.g. 50,000 blocks), which silently breaks the audit trail.
+  // Local Anvil chains start near block 0, so 0n is fine there.
+  deployedAtBlock: bigint;
 };
 
 export const addressesByChainId: Record<number, CovenantAddresses> = {
@@ -21,6 +26,7 @@ export const addressesByChainId: Record<number, CovenantAddresses> = {
     settlementRouter: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
     usdc: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
     cngn: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+    deployedAtBlock: 0n,
   },
   // Ethereum Sepolia (chain id 11155111) — public-testnet stand-in for Arc testnet, used for the
   // public demo link. From contracts/broadcast/Deploy.s.sol/11155111/run-latest.json
@@ -32,6 +38,7 @@ export const addressesByChainId: Record<number, CovenantAddresses> = {
     settlementRouter: "0xD8da95168Ba9eE8600c2373c853b664e207d7848",
     usdc: "0x41A069bdB1fDE2b5ad54F2C96Cd38B5DA9e6808E",
     cngn: "0x4220880B42Cc4EAE952078BC682B880D821C7b43",
+    deployedAtBlock: 11603582n,
   },
 };
 

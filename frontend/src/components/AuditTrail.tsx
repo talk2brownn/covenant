@@ -6,6 +6,21 @@ import { getAddresses } from "../lib/addresses";
 import { useActiveChainId } from "../lib/useActiveChainId";
 import { Card } from "./Card";
 
+// Public RPC nodes commonly cap eth_getLogs at a 50,000-block range per call. Sepolia produces a
+// block roughly every 12s, so that window shrinks to under 7 days of history in a single request
+// as the chain grows past the deploy block. Chunk the range so the audit trail keeps working no
+// matter how much time has passed since deployment.
+const MAX_BLOCK_RANGE = 40_000n;
+
+function blockChunks(fromBlock: bigint, latest: bigint): Array<{ fromBlock: bigint; toBlock: bigint }> {
+  const chunks: Array<{ fromBlock: bigint; toBlock: bigint }> = [];
+  for (let start = fromBlock; start <= latest; start += MAX_BLOCK_RANGE) {
+    const end = start + MAX_BLOCK_RANGE - 1n > latest ? latest : start + MAX_BLOCK_RANGE - 1n;
+    chunks.push({ fromBlock: start, toBlock: end });
+  }
+  return chunks;
+}
+
 type Props = {
   agent: Address;
 };
@@ -27,22 +42,34 @@ export function AuditTrail({ agent }: Props) {
   const reload = useCallback(async () => {
     if (!publicClient || !addresses) return;
 
-    const [settled, denied] = await Promise.all([
-      publicClient.getContractEvents({
-        address: addresses.settlementRouter,
-        abi: abis.settlementRouter,
-        eventName: "PaymentSettled",
-        args: { agent },
-        fromBlock: 0n,
-      }),
-      publicClient.getContractEvents({
-        address: addresses.settlementRouter,
-        abi: abis.settlementRouter,
-        eventName: "PaymentDenied",
-        args: { agent },
-        fromBlock: 0n,
-      }),
-    ]);
+    const latest = await publicClient.getBlockNumber();
+    const ranges = blockChunks(addresses.deployedAtBlock, latest);
+
+    const settledChunks = await Promise.all(
+      ranges.map((range) =>
+        publicClient.getContractEvents({
+          address: addresses.settlementRouter,
+          abi: abis.settlementRouter,
+          eventName: "PaymentSettled",
+          args: { agent },
+          ...range,
+        }),
+      ),
+    );
+    const deniedChunks = await Promise.all(
+      ranges.map((range) =>
+        publicClient.getContractEvents({
+          address: addresses.settlementRouter,
+          abi: abis.settlementRouter,
+          eventName: "PaymentDenied",
+          args: { agent },
+          ...range,
+        }),
+      ),
+    );
+
+    const settled = settledChunks.flat();
+    const denied = deniedChunks.flat();
 
     const combined: AuditEntry[] = [
       ...settled.map((log) => ({
