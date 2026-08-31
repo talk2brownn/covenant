@@ -13,9 +13,10 @@ remappings = [
 ]
 
 [rpc_endpoints]
-arc_testnet = "${ARC_TESTNET_RPC_URL}"
+arc_testnet = "https://rpc.testnet.arc.io"
 
+# Arc testnet's explorer (testnet.arcscan.app) is Blockscout-based, verified via:
+# forge verify-contract <address> <contract> --rpc-url arc_testnet --verifier blockscout --verifier-url https://testnet.arcscan.app/api/
 [etherscan]
-# fill in once Arc's block explorer / verifier API is confirmed
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

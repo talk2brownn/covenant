@@ -1,28 +1,33 @@
 import { defineChain } from "viem";
 import { anvil, sepolia } from "viem/chains";
 
-// Arc's testnet chain id / RPC aren't public knowledge baked into viem yet, so this reads from
-// env vars (see .env.example) rather than hardcoding a value that could be wrong. Fill these in
-// from Arc's own docs before pointing the app at testnet.
+// Arc testnet — public since October 2025. Chain id and RPC confirmed live against
+// https://docs.arc.io/arc/references/connect-to-arc and https://rpc.testnet.arc.io directly.
+// Gas is paid in USDC, but the native-currency field on Arc uses 18 decimals (not USDC's usual
+// 6) — confirmed from Arc's own docs, not assumed.
 export const arcTestnet = defineChain({
-  id: Number(import.meta.env.VITE_ARC_CHAIN_ID ?? 0),
+  id: 5042002,
   name: "Arc Testnet",
-  nativeCurrency: { name: "USD Coin", symbol: "USDC", decimals: 6 },
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   rpcUrls: {
-    default: { http: [import.meta.env.VITE_ARC_RPC_URL ?? ""] },
+    default: { http: ["https://rpc.testnet.arc.io"] },
+  },
+  blockExplorers: {
+    default: { name: "Arcscan", url: "https://testnet.arcscan.app" },
   },
   testnet: true,
 });
 
 export const localAnvil = anvil;
 
-// Ethereum Sepolia — used as a public-testnet stand-in for Arc's testnet in demos, since Arc's
-// own testnet RPC/chain ID aren't available yet (see build brief §5, §8). Swap this out once
-// Arc testnet access lands; the contracts themselves are unaffected either way.
+// Ethereum Sepolia — kept as a fallback public-testnet option; Arc testnet is now the primary
+// target now that it's confirmed publicly reachable (see arcTestnet above).
 export const sepoliaTestnet = sepolia;
+
+export type SupportedChainId = typeof arcTestnet.id | typeof sepoliaTestnet.id | typeof localAnvil.id;
 
 // Used for read-only views when no wallet is connected yet, so the dashboard is browsable
 // (and screenshot/demo-able) without requiring a connection first. Writes always go through
 // whatever chain the connected wallet is actually on.
-export const DEFAULT_CHAIN_ID = Number(import.meta.env.VITE_DEFAULT_CHAIN_ID ?? localAnvil.id);
-
+export const DEFAULT_CHAIN_ID = (Number(import.meta.env.VITE_DEFAULT_CHAIN_ID) ||
+  localAnvil.id) as SupportedChainId;
