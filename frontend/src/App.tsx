@@ -8,9 +8,12 @@ import { AutonomyMeter } from "./components/AutonomyMeter";
 import { PaymentPanel } from "./components/PaymentPanel";
 import { AuditTrail } from "./components/AuditTrail";
 import { PipelineStrip } from "./components/PipelineStrip";
+import { DEMO_AGENT } from "./lib/demoData";
 
 function App() {
-  const [agent, setAgent] = useState<Address | undefined>(undefined);
+  // Defaults to the seeded demo agent so a cold visitor (e.g. a grant reviewer) sees a live
+  // mandate immediately instead of an empty "enter an address" prompt. Still fully editable.
+  const [agent, setAgent] = useState<Address | undefined>(DEMO_AGENT);
 
   return (
     <div className="app">

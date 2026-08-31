@@ -391,6 +391,19 @@ button:disabled {
 
 /* ---------- payment form ---------- */
 
+.demo-fill-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.demo-fill-row button {
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

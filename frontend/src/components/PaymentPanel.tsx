@@ -4,6 +4,7 @@ import { formatUnits, isAddress, keccak256, parseUnits, toBytes, type Address } 
 import { abis, CHECK_LABELS } from "../lib/contracts";
 import { getAddresses } from "../lib/addresses";
 import { useActiveChainId } from "../lib/useActiveChainId";
+import { DEMO_VENDOR_CNGN, DEMO_VENDOR_USDC } from "../lib/demoData";
 import { Card } from "./Card";
 import { CheckIcon, CrossIcon } from "./icons";
 
@@ -83,8 +84,26 @@ export function PaymentPanel({ agent }: Props) {
 
   const canSend = !!decision?.approved && !needsApproval && !!addresses;
 
+  const fillDemo = (kind: "same-currency" | "cross-currency") => {
+    setCounterparty(kind === "same-currency" ? DEMO_VENDOR_USDC : DEMO_VENDOR_CNGN);
+    setCategory("saas");
+    setSettlementToken(kind === "same-currency" ? addresses?.usdc ?? "" : addresses?.cngn ?? "");
+    setAmount("50");
+  };
+
   return (
     <Card title="Send a Payment" layer="Layer 2–5" accent="ledger" index={2}>
+      {addresses && (
+        <div className="demo-fill-row">
+          <span className="hint">Try it:</span>
+          <button className="btn-ghost" onClick={() => fillDemo("same-currency")}>
+            Same-currency demo
+          </button>
+          <button className="btn-ghost" onClick={() => fillDemo("cross-currency")}>
+            Cross-currency (FX) demo
+          </button>
+        </div>
+      )}
       <div className="form-grid">
         <label>
           Counterparty
