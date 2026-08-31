@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useReadContract } from "wagmi";
 import { formatUnits, type Address } from "viem";
 import { abis } from "../lib/contracts";
@@ -7,20 +8,32 @@ import { Card } from "./Card";
 
 type Props = {
   agent: Address;
+  // Bumped by the parent after this browser's own writes settle, so the mandate refetches
+  // immediately without needing continuous background polling (see App.tsx).
+  refreshOn?: number;
 };
 
-export function MandateCard({ agent }: Props) {
+export function MandateCard({ agent, refreshOn }: Props) {
   const chainId = useActiveChainId();
   const addresses = getAddresses(chainId);
 
-  const { data: mandate, isLoading } = useReadContract({
+  const { data: mandate, isLoading, refetch } = useReadContract({
     chainId,
     address: addresses?.mandateRegistry,
     abi: abis.mandateRegistry,
     functionName: "getMandate",
     args: [agent],
-    query: { enabled: !!addresses, refetchInterval: 15000 },
+    // 45s safety net for changes this browser didn't cause (another session/principal acting on
+    // the same mandate) — deliberately relaxed since public testnet RPCs rate-limit aggressively.
+    query: { enabled: !!addresses, refetchInterval: 45000 },
   });
+
+  useEffect(() => {
+    // App.tsx's activityTick starts at 0 and only increments on real activity, so this skips
+    // the redundant extra fetch on initial mount (useReadContract already fetches once itself).
+    if (refreshOn) refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshOn]);
 
   const { data: decimals } = useReadContract({
     chainId,

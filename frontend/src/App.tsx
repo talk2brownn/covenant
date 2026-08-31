@@ -15,6 +15,13 @@ function App() {
   // mandate immediately instead of an empty "enter an address" prompt. Still fully editable.
   const [agent, setAgent] = useState<Address | undefined>(DEMO_AGENT);
 
+  // Bumped after this browser's own writes (payment settled, freeze/restore confirmed) so
+  // dependent cards refetch immediately. Public testnet RPCs rate-limit aggressively, so the
+  // dashboard deliberately favors "refresh when something actually happened" over continuous
+  // background polling — see docs/build-notes.md.
+  const [activityTick, setActivityTick] = useState(0);
+  const bumpActivity = () => setActivityTick((t) => t + 1);
+
   return (
     <div className="app">
       <header className="app-header">
@@ -31,10 +38,10 @@ function App() {
 
       {agent ? (
         <div className="dashboard-grid">
-          <MandateCard agent={agent} />
-          <AutonomyMeter agent={agent} />
-          <PaymentPanel agent={agent} />
-          <AuditTrail agent={agent} />
+          <MandateCard agent={agent} refreshOn={activityTick} />
+          <AutonomyMeter agent={agent} onActivity={bumpActivity} />
+          <PaymentPanel agent={agent} onSettled={bumpActivity} />
+          <AuditTrail agent={agent} refreshOn={activityTick} />
         </div>
       ) : (
         <p className="hint">Enter an agent address above to view its mandate.</p>

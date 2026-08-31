@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { formatUnits, isAddress, keccak256, parseUnits, toBytes, type Address } from "viem";
 import { abis, CHECK_LABELS } from "../lib/contracts";
@@ -10,9 +10,12 @@ import { CheckIcon, CrossIcon } from "./icons";
 
 type Props = {
   agent: Address;
+  // Called once a settlement transaction actually confirms (not just submits), so sibling cards
+  // (mandate spend, audit trail) can refresh without needing continuous background polling.
+  onSettled?: () => void;
 };
 
-export function PaymentPanel({ agent }: Props) {
+export function PaymentPanel({ agent, onSettled }: Props) {
   const chainId = useActiveChainId();
   const addresses = getAddresses(chainId);
 
@@ -76,6 +79,11 @@ export function PaymentPanel({ agent }: Props) {
     reset: resetSubmission,
   } = useWriteContract();
   const { data: receipt, isLoading: waitingForReceipt } = useWaitForTransactionReceipt({ hash: txHash });
+
+  useEffect(() => {
+    if (receipt) onSettled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [receipt]);
 
   const decision = preflight?.[0];
   const requiresFx = preflight?.[1] ?? false;

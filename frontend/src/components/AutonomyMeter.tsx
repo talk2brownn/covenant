@@ -7,12 +7,15 @@ import { Card } from "./Card";
 
 type Props = {
   agent: Address;
+  // Called after a freeze/restore write is submitted, so sibling cards can refresh too instead
+  // of relying on continuous polling (see App.tsx).
+  onActivity?: () => void;
 };
 
 const TONE_BY_STATUS = ["good", "warn", "bad"] as const;
 const EMOJI_BY_STATUS = ["\u{1F7E2}", "\u{1F7E1}", "\u{1F534}"] as const;
 
-export function AutonomyMeter({ agent }: Props) {
+export function AutonomyMeter({ agent, onActivity }: Props) {
   const chainId = useActiveChainId();
   const addresses = getAddresses(chainId);
   const { writeContract, isPending } = useWriteContract();
@@ -23,7 +26,9 @@ export function AutonomyMeter({ agent }: Props) {
     abi: abis.killSwitch,
     functionName: "status",
     args: [agent],
-    query: { enabled: !!addresses, refetchInterval: 15000 },
+    // 45s safety net for changes this browser didn't cause — deliberately relaxed since public
+    // testnet RPCs rate-limit aggressively.
+    query: { enabled: !!addresses, refetchInterval: 45000 },
   });
 
   if (!addresses) return null;
@@ -35,13 +40,23 @@ export function AutonomyMeter({ agent }: Props) {
   const freeze = () =>
     writeContract(
       { address: addresses.killSwitch, abi: abis.killSwitch, functionName: "manualFreeze", args: [agent] },
-      { onSuccess: () => refetch() },
+      {
+        onSuccess: () => {
+          refetch();
+          onActivity?.();
+        },
+      },
     );
 
   const restore = (to: 0 | 1) =>
     writeContract(
       { address: addresses.killSwitch, abi: abis.killSwitch, functionName: "manualRestore", args: [agent, to] },
-      { onSuccess: () => refetch() },
+      {
+        onSuccess: () => {
+          refetch();
+          onActivity?.();
+        },
+      },
     );
 
   return (
