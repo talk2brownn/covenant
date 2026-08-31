@@ -24,8 +24,10 @@ Deployed on Arc testnet (chain `5042002`), all 7 contracts verified on
 | MockUSDC | [`0x41A0...6808E`](https://testnet.arcscan.app/address/0x41a069bdb1fde2b5ad54f2c96cd38b5da9e6808e) | Demo home currency |
 | MockCNGN | [`0x4220...C7b43`](https://testnet.arcscan.app/address/0x4220880b42cc4eae952078bc682b880d821c7b43) | Demo settlement currency |
 
-Demo mandate agent: `0xb6d1D5EE3d424C58c8B0cF791800bAdF0Eddc91C`. Also deployed to Ethereum
-Sepolia (chain `11155111`) as a fallback — same addresses, see `frontend/src/lib/addresses.ts`.
+Demo mandate agent: `0x8e13EA90eab71981f5cbBC3719F7D238D2C12453` (Arc testnet). Also deployed to
+Ethereum Sepolia (chain `11155111`) as a fallback — same contract addresses, different demo
+agent (`0xb6d1D5EE3d424C58c8B0cF791800bAdF0Eddc91C`, has spend history from earlier testing) —
+see `frontend/src/lib/addresses.ts` and `frontend/src/lib/demoData.ts`.
 
 ## Layout
 
