@@ -23,7 +23,7 @@ export function AutonomyMeter({ agent }: Props) {
     abi: abis.killSwitch,
     functionName: "status",
     args: [agent],
-    query: { enabled: !!addresses, refetchInterval: 5000 },
+    query: { enabled: !!addresses, refetchInterval: 15000 },
   });
 
   if (!addresses) return null;

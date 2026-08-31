@@ -19,7 +19,7 @@ export function MandateCard({ agent }: Props) {
     abi: abis.mandateRegistry,
     functionName: "getMandate",
     args: [agent],
-    query: { enabled: !!addresses, refetchInterval: 5000 },
+    query: { enabled: !!addresses, refetchInterval: 15000 },
   });
 
   const { data: decimals } = useReadContract({
