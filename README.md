@@ -1,9 +1,11 @@
 # Covenant
 
 Machine-enforceable spending mandates for AI agents, settled atomically on Arc — same-currency or
-cross-currency — via a mocked StableFX-shaped FX escrow. See [docs/covenant-build-brief.md](docs/covenant-build-brief.md)
-for the full pitch, architecture, and scope rationale, and [docs/build-notes.md](docs/build-notes.md)
-for non-obvious decisions and gotchas hit while building it.
+cross-currency — via a mocked StableFX-shaped FX escrow. See [docs/pitch-v2.md](docs/pitch-v2.md)
+for the current pitch and positioning (Covenant as an open, on-chain complement to Circle's own
+Agent Wallets, not a replacement for it), [docs/covenant-build-brief.md](docs/covenant-build-brief.md)
+for the original architecture/scope brief, and [docs/build-notes.md](docs/build-notes.md) for
+non-obvious decisions and gotchas hit while building it.
 
 ## Live demo
 

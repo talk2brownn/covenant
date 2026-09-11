@@ -1,5 +1,10 @@
 # Covenant — build brief
 
+> **⚠️ Superseded positioning:** §2–3 below claim "no middle ground shipped today" and name a
+> "gap nobody occupies." That's no longer accurate — Circle's own Agent Wallets already ship most
+> of this as a first-party product. See [`pitch-v2.md`](pitch-v2.md) for the corrected framing.
+> Kept below unedited for provenance (this is the user's original brief).
+
 **One system. One team. Two internal layers: authorization and settlement.**
 
 Tagline: *"Autonomy needs boundaries. Boundaries need borders."*
