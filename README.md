@@ -34,9 +34,11 @@ see `frontend/src/lib/addresses.ts` and `frontend/src/lib/demoData.ts`.
 ## Layout
 
 ```
-contracts/   Foundry project: MandateRegistry, PolicyEngine, KillSwitch, MockFXEscrow, SettlementRouter
-frontend/    Vite + React + TS dashboard: mandate status, autonomy meter, explainability, freeze controls
-docs/        Build brief and design notes
+contracts/     Foundry project: MandateRegistry, PolicyEngine, KillSwitch, MockFXEscrow, SettlementRouter
+frontend/      Vite + React + TS dashboard: mandate status, autonomy meter, explainability, freeze controls
+circle-wallet/ Scripts that make a Circle developer-controlled wallet the agent identity on Arc
+               testnet, and prove a settlePayment call signed entirely server-side (no MetaMask)
+docs/          Build brief and design notes
 ```
 
 ## Contracts

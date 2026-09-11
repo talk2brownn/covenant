@@ -3,6 +3,35 @@
 Running log of non-obvious decisions and gotchas hit while building Covenant V1. The build brief
 (`covenant-build-brief.md`) is the spec; this file is what we learned building against it.
 
+## Circle developer-controlled wallets (circle-wallet/)
+
+Scaffolded before ever running against a real API key, so every SDK call had to be verified
+against Circle's own docs/source rather than assumed — same discipline as everywhere else on
+this build (see the Arc-testnet and signature-domain lessons below). Two things a first read of
+Circle's docs got wrong enough to be worth recording:
+
+- **`generateEntitySecret()` returns `void` — it only prints to the console.** The obvious
+  `const secret = generateEntitySecret()` pattern silently produces `undefined`. Confirmed by
+  reading the installed package's own compiled source (`node_modules/@circle-fin/developer-
+  controlled-wallets/dist/developer-controlled-wallets.cjs.js`), not just the docs. Fixed by
+  generating the same shape of value directly with Node's `crypto.randomBytes(32).toString
+  ("hex")` instead (that's literally what the SDK helper does internally) so the value can be
+  captured and registered programmatically.
+- **`bytesToHex`/`randomBytes` exist in the SDK's type declarations but aren't part of the
+  actual published package entry point.** They live in an internal shared-core `.d.ts` that
+  isn't re-exported from `@circle-fin/developer-controlled-wallets`'s own top level — importing
+  them throws `does not provide an export named 'bytesToHex'` at runtime despite type-checking
+  cleanly. Caught immediately by actually running the script instead of trusting a clean `tsc
+  --noEmit`, which is why every script in `circle-wallet/` got a real (if credential-less) smoke
+  test before being called done — see the "verify, don't trust status codes" habit this project
+  keeps re-learning.
+- **`getTransaction` has a built-in `waitForState` option** that polls server-side and rejects
+  on a terminal failure state — no need to hand-roll a poll loop, confirmed from the installed
+  SDK's own type declarations (`GetTransactionWaitFor`).
+- `"ARC-TESTNET"` as a `Blockchain` value is genuinely correct — confirmed directly from the
+  installed SDK's own enum (`Blockchain.ArcTestnet = "ARC-TESTNET"`), not just inferred from
+  example code this time.
+
 ## Contracts
 
 - **Denials do not revert the transaction.** `SettlementRouter.settlePayment` returns

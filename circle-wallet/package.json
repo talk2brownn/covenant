@@ -1,0 +1,25 @@
+{
+  "name": "circle-wallet",
+  "private": true,
+  "type": "module",
+  "description": "One-time setup scripts that make a Circle developer-controlled wallet the Covenant agent identity on Arc testnet, then demonstrate a server-signed settlePayment call (no MetaMask popup).",
+  "scripts": {
+    "01-register-entity-secret": "tsx scripts/01-register-entity-secret.ts",
+    "02-create-wallet": "tsx scripts/02-create-wallet.ts",
+    "03-create-mandate": "tsx scripts/03-create-mandate.ts",
+    "04-fund-wallet": "tsx scripts/04-fund-wallet.ts",
+    "05-approve-router": "tsx scripts/05-approve-router.ts",
+    "06-settle-payment": "tsx scripts/06-settle-payment.ts",
+    "status": "tsx scripts/07-check-status.ts"
+  },
+  "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "latest",
+    "dotenv": "^16.4.5",
+    "viem": "^2.55.19"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "tsx": "^4.19.2",
+    "typescript": "~6.0.2"
+  }
+}
