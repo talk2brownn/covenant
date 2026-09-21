@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { formatUnits, isAddress, keccak256, parseUnits, toBytes, type Address } from "viem";
 import { abis, CHECK_LABELS } from "../lib/contracts";
 import { getAddresses } from "../lib/addresses";
@@ -13,11 +13,17 @@ type Props = {
   // Called once a settlement transaction actually confirms (not just submits), so sibling cards
   // (mandate spend, audit trail) can refresh without needing continuous background polling.
   onSettled?: () => void;
+  // True when this agent signs its own payments server-side through Circle, so there is no
+  // browser wallet that could ever send them.
+  agentIsCircle?: boolean;
 };
 
-export function PaymentPanel({ agent, onSettled }: Props) {
+export function PaymentPanel({ agent, onSettled, agentIsCircle }: Props) {
   const chainId = useActiveChainId();
   const addresses = getAddresses(chainId);
+  const { address: connected } = useAccount();
+  // settlePayment requires msg.sender == agent, so only the agent's own wallet can send.
+  const isAgentWallet = !!connected && connected.toLowerCase() === agent.toLowerCase();
 
   const [counterparty, setCounterparty] = useState("");
   const [category, setCategory] = useState("saas");
@@ -92,11 +98,11 @@ export function PaymentPanel({ agent, onSettled }: Props) {
 
   const canSend = !!decision?.approved && !needsApproval && !!addresses;
 
-  const fillDemo = (kind: "same-currency" | "cross-currency") => {
-    setCounterparty(kind === "same-currency" ? DEMO_VENDOR_USDC : DEMO_VENDOR_CNGN);
+  const fillDemo = (kind: "same-currency" | "cross-currency" | "over-limit") => {
+    setCounterparty(kind === "cross-currency" ? DEMO_VENDOR_CNGN : DEMO_VENDOR_USDC);
     setCategory("saas");
-    setSettlementToken(kind === "same-currency" ? addresses?.usdc ?? "" : addresses?.cngn ?? "");
-    setAmount("50");
+    setSettlementToken(kind === "cross-currency" ? addresses?.cngn ?? "" : addresses?.usdc ?? "");
+    setAmount(kind === "over-limit" ? "600" : "50");
   };
 
   return (
@@ -109,6 +115,9 @@ export function PaymentPanel({ agent, onSettled }: Props) {
           </button>
           <button className="btn-ghost" onClick={() => fillDemo("cross-currency")}>
             Cross-currency (FX) demo
+          </button>
+          <button className="btn-ghost" onClick={() => fillDemo("over-limit")}>
+            Over-limit demo
           </button>
         </div>
       )}
@@ -155,7 +164,10 @@ export function PaymentPanel({ agent, onSettled }: Props) {
               <p>
                 {formatUnits(quote.fromAmount, decimals ?? 6)} (home currency) &rarr; {formatUnits(quote.toAmount, decimals ?? 6)} settlement currency
               </p>
-              <p className="hint">Atomic payment-vs-payment: both legs settle together or the transaction reverts. No counterparty exposure.</p>
+              <p className="hint">
+                Both legs settle in one transaction or the whole payment reverts. The FX leg is a mock escrow on
+                testnet (static rate table) standing in for Circle's StableFX.
+              </p>
             </div>
           )}
 
@@ -167,43 +179,58 @@ export function PaymentPanel({ agent, onSettled }: Props) {
         </div>
       )}
 
-      {needsApproval && mandate?.homeCurrency && (
-        <button
-          className="btn-secondary"
-          disabled={approving}
-          onClick={() =>
-            approve({
-              address: mandate.homeCurrency,
-              abi: abis.erc20,
-              functionName: "approve",
-              args: [addresses!.settlementRouter, amountBaseUnits ?? 0n],
-            })
-          }
-        >
-          {approving ? "Approving..." : "Approve router to spend home currency"}
-        </button>
-      )}
+      {agentIsCircle ? (
+        <div className="agent-note">
+          <strong>This agent is a Circle developer-controlled wallet.</strong> It signs its own payments
+          server-side through Circle's API, so there is no wallet popup to click. The checklist above is a free
+          on-chain dry run of the same policy engine — real payments appear in the Audit Trail as they land.
+        </div>
+      ) : !isAgentWallet ? (
+        <div className="agent-note">
+          <strong>Only the agent's own wallet can send payments</strong> — the contract requires the caller to
+          equal the agent. Connect that wallet to send; the checklist above is a free dry run either way.
+        </div>
+      ) : (
+        <>
+          {needsApproval && mandate?.homeCurrency && (
+            <button
+              className="btn-secondary"
+              disabled={approving}
+              onClick={() =>
+                approve({
+                  address: mandate.homeCurrency,
+                  abi: abis.erc20,
+                  functionName: "approve",
+                  args: [addresses!.settlementRouter, amountBaseUnits ?? 0n],
+                })
+              }
+            >
+              {approving ? "Approving..." : "Approve router to spend home currency"}
+            </button>
+          )}
 
-      <button
-        className="btn-primary"
-        disabled={!canSend || submitting || waitingForReceipt}
-        onClick={() => {
-          resetSubmission();
-          submitPayment({
-            address: addresses!.settlementRouter,
-            abi: abis.settlementRouter,
-            functionName: "settlePayment",
-            args: [agent, counterparty as Address, categoryBytes32!, settlementToken as Address, amountBaseUnits!],
-          });
-        }}
-      >
-        {submitting || waitingForReceipt ? "Settling..." : "Send Payment"}
-      </button>
+          <button
+            className="btn-primary"
+            disabled={!canSend || submitting || waitingForReceipt}
+            onClick={() => {
+              resetSubmission();
+              submitPayment({
+                address: addresses!.settlementRouter,
+                abi: abis.settlementRouter,
+                functionName: "settlePayment",
+                args: [agent, counterparty as Address, categoryBytes32!, settlementToken as Address, amountBaseUnits!],
+              });
+            }}
+          >
+            {submitting || waitingForReceipt ? "Settling..." : "Send Payment"}
+          </button>
 
-      {receipt && (
-        <p className="hint">
-          Settled in block {receipt.blockNumber.toString()}. Check the audit trail below for the final outcome.
-        </p>
+          {receipt && (
+            <p className="hint">
+              Settled in block {receipt.blockNumber.toString()}. Check the audit trail below for the final outcome.
+            </p>
+          )}
+        </>
       )}
     </Card>
   );

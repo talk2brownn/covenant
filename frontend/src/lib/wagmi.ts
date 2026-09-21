@@ -1,5 +1,17 @@
-import { createConfig, http, injected } from "wagmi";
+import { createConfig, fallback, http, injected } from "wagmi";
 import { arcTestnet, localAnvil, sepoliaTestnet } from "./chains";
+
+// Public Arc testnet endpoints, tried in order per request. One provider is never enough here:
+// dRPC's free tier rejected every eth_getLogs call ("ranges over 10000 blocks", even for 500-block
+// windows) when re-tested on 2026-09-21 despite working three weeks earlier, and rpc.testnet.arc.io
+// timed out on one day and answered fine the next. All five answered log queries in ~1.5s that day.
+const ARC_RPC_URLS = [
+  import.meta.env.VITE_ARC_RPC_URL,
+  "https://rpc.drpc.testnet.arc.io",
+  "https://rpc.blockdaemon.testnet.arc.io",
+  "https://rpc.quicknode.testnet.arc.io",
+  "https://rpc.testnet.arc.io",
+].filter((url): url is string => !!url);
 
 export const wagmiConfig = createConfig({
   chains: [arcTestnet, sepoliaTestnet, localAnvil],
@@ -9,10 +21,9 @@ export const wagmiConfig = createConfig({
   // reasonably live without tripping rate limits on its own.
   pollingInterval: 12_000,
   transports: {
-    // dRPC's Arc testnet endpoint held up under 15 concurrent requests with zero rate-limiting
-    // in testing, where the primary shared rpc.testnet.arc.io endpoint was choking on far less.
-    // Falls back to the primary if VITE_ARC_RPC_URL is set to override it.
-    [arcTestnet.id]: http(import.meta.env.VITE_ARC_RPC_URL ?? "https://rpc.drpc.testnet.arc.io"),
+    [arcTestnet.id]: fallback(ARC_RPC_URLS.map((url) => http(url, { timeout: 8_000, retryCount: 0 })), {
+      rank: false,
+    }),
     [sepoliaTestnet.id]: http(import.meta.env.VITE_SEPOLIA_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com"),
     [localAnvil.id]: http(),
   },

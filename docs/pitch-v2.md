@@ -32,7 +32,7 @@ and nothing can compose with it on-chain without going through a Circle Agent Wa
 
 That's the actual gap — not "nobody solved agent spending limits," but "the only place this logic
 exists is closed." Covenant's mandate, policy engine, and settlement router are plain verified
-Solidity, readable on Arcscan line by line, callable by any address, forkable by anyone. Same
+Solidity, readable on the Arc explorer line by line, callable by any address, forkable by anyone. Same
 category of guarantee Circle offers, delivered as a permissionless primitive instead of a hosted
 service — the same argument for why on-chain lending protocols exist despite centralized lenders
 being available and arguably safer in the short run.
@@ -40,11 +40,25 @@ being available and arguably safer in the short run.
 ## Relationship to Circle, made explicit
 
 Covenant is not a replacement for Circle's stack — it's built to sit on top of it. The agent
-identity in Covenant is designed to be a Circle developer-controlled wallet (in progress); the FX
-leg is interface-matched to StableFX specifically so integrating the real thing is a config
-change. What Covenant adds is a public, on-chain layer where the *policy decision itself* —
-every check, pass or fail, for every payment — is a verifiable on-chain event, not a private log
-entry inside a hosted platform.
+identity **is** a Circle developer-controlled wallet (live on Arc testnet, 2026-09-16): it signs
+its own `settlePayment` calls server-side through Circle's API and the on-chain policy engine
+decides whether they go through. What Covenant adds is a public, on-chain layer where the
+*policy decision itself* is a verifiable on-chain event rather than a private log entry inside a
+hosted platform. Precisely: a denied payment emits the full 10-item checklist with every failed
+check named (`PaymentDenied`); an approved payment emits `PaymentSettled`, which by construction
+means all ten checks passed (the per-check detail for approvals is not stored — the dashboard's
+dry-run recomputes it against current state).
+
+**The FX leg is a mock, and swapping in StableFX is real work, not a config change.** An earlier
+version of this pitch (and the build brief) claimed the mock is "interface-matched" to StableFX so
+the swap would be trivial. That was wrong. Per Circle's StableFX technical guide, quotes come from
+an off-chain API (sub-500ms, minimum 10 USDC, instant/hourly/daily tenors); accepting a quote locks
+the rate; both sides then sign, and settlement runs through an on-chain `FxEscrow` in asynchronous
+steps (taker funds via a Permit2 signature, then the maker funds) — not a single synchronous
+call. Covenant's `IFXEscrow` (view quote, then `settle` in the same transaction) mirrors the idea
+of RFQ plus payment-vs-payment, not the actual integration surface. A real integration would need
+an adapter and a policy gate in front of the taker's Permit2 signature (the wallet signs only if
+the mandate approves). That design is unbuilt; treat it as the V2 plan, not a claim.
 
 ## What's still unverified / needs honesty going forward
 
@@ -56,6 +70,10 @@ entry inside a hosted platform.
   is even public) — the research was Circle's own docs/marketing content, not an audit. Treat
   "2-of-2 MPC, enforced at the wallet layer" as Circle's own claim about their product, not
   something Covenant has independently verified.
+- The Circle wallet used here is a *developer-controlled wallet* (Circle's wallets API), which is
+  not the same product as Agent Wallets. This build has not verified how DCW custody works
+  internally, so don't describe it as MPC or claim a specific security model for it — say only
+  that Circle's infrastructure holds the key and signs on request.
 
 ## Demo framing change
 

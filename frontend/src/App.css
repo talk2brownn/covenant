@@ -119,6 +119,34 @@
   max-width: 420px;
 }
 
+.live-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -12px 0 22px;
+  flex-wrap: wrap;
+}
+
+.live-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--text-faint);
+}
+
+.live-dot-on {
+  background: var(--good-strong);
+  border-color: var(--good-strong);
+}
+
 /* ---------- layout ---------- */
 
 .dashboard-grid {
@@ -333,7 +361,7 @@ button:disabled {
 
 .kv {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 7px 16px;
   font-size: 13px;
   margin: 0;
@@ -344,6 +372,7 @@ button:disabled {
 }
 
 .kv dd {
+  overflow-wrap: anywhere;
   margin: 0;
   font-family: var(--font-mono);
 }
@@ -509,6 +538,21 @@ button:disabled {
   color: var(--bad-strong);
 }
 
+.agent-note {
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  border-left: 3px solid var(--ink);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.agent-note strong {
+  color: var(--text);
+}
+
 /* ---------- audit trail ---------- */
 
 .audit-list {
@@ -540,6 +584,62 @@ button:disabled {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.audit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.audit-fx {
+  color: var(--ledger-strong);
+  font-size: 12px;
+}
+
+.audit-reasons {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: none;
+  overflow: visible;
+}
+
+.audit-list .audit-reasons li {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12.5px;
+  color: var(--bad-strong);
+}
+
+.audit-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.audit-link {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.audit-link:hover {
+  color: var(--ink-strong);
+  text-decoration: underline;
+}
+
+.audit-updated {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
 }
 
 .audit-settled .audit-kind {

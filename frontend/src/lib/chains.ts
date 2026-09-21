@@ -13,7 +13,7 @@ export const arcTestnet = defineChain({
     default: { http: ["https://rpc.testnet.arc.io"] },
   },
   blockExplorers: {
-    default: { name: "Arcscan", url: "https://testnet.arcscan.app" },
+    default: { name: "Arc Explorer", url: "https://explorer.testnet.arc.io" },
   },
   testnet: true,
 });

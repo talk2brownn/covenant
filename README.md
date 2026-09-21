@@ -1,45 +1,87 @@
 # Covenant
 
-Machine-enforceable spending mandates for AI agents, settled atomically on Arc — same-currency or
-cross-currency — via a mocked StableFX-shaped FX escrow. See [docs/pitch-v2.md](docs/pitch-v2.md)
-for the current pitch and positioning (Covenant as an open, on-chain complement to Circle's own
-Agent Wallets, not a replacement for it), [docs/covenant-build-brief.md](docs/covenant-build-brief.md)
-for the original architecture/scope brief, and [docs/build-notes.md](docs/build-notes.md) for
-non-obvious decisions and gotchas hit while building it.
+Machine-enforceable spending mandates for AI agents on Arc. An agent gets a budget, per-transaction
+and daily caps, approved vendors and currencies, and an emergency kill-switch — all enforced by
+public smart contracts before any money moves. Payments settle in the agent's home currency or,
+across currencies, through an FX escrow (mocked on testnet — see [What's mocked](#whats-mocked-vs-real)).
+
+The agent's identity is a **Circle developer-controlled wallet**: it signs its own payments
+server-side through Circle's API — no browser wallet, no human clicking "confirm."
+
+Covenant is an open, on-chain complement to Circle's own hosted Agent Wallets, not a replacement.
+See [docs/pitch-v2.md](docs/pitch-v2.md) for the current positioning,
+[docs/covenant-build-brief.md](docs/covenant-build-brief.md) for the original brief (kept for
+provenance; its competitive claims are superseded), and [docs/build-notes.md](docs/build-notes.md)
+for non-obvious decisions and gotchas hit while building.
 
 ## Live demo
 
-**https://frontend-seven-tawny-sisy614wmx.vercel.app** — defaults to Arc testnet, no wallet needed
-to view the mandate. Click "Same-currency demo" or "Cross-currency (FX) demo" on the payment form
-to auto-fill a working example; connect a wallet to actually submit it.
+**https://frontend-seven-tawny-sisy614wmx.vercel.app** — opens on a real Circle-signed agent on Arc
+testnet with a history of real payments: a same-currency payment, a cross-currency payment
+(10 USDC → 14,925 cNGN), an over-limit denial, and a payment blocked by the kill-switch. No wallet
+needed.
 
-Deployed on Arc testnet (chain `5042002`), all 7 contracts verified on
-[Arcscan](https://testnet.arcscan.app):
+- **Audit Trail** shows every settlement and denial from the chain, with the exact failed check for
+  denials and a link to each transaction.
+- **Send a Payment → "Over-limit demo"** runs the policy engine as a free dry-run: you see the
+  10-item constraint checklist fail on the per-transaction limit, with no wallet and no gas.
+- The agent can't be paid from the browser — it signs server-side. To watch payments land live,
+  run the scripts below and turn on **Live updates** (or open the dashboard with `live=1`).
+- Any agent: `?agent=0x...`. Circle-signed agent: add `&signer=circle`. Live polling: `&live=1`.
+
+## Deployed on Arc testnet (chain `5042002`)
+
+All 7 contracts are verified on the Arc explorer (Blockscout). Arc's explorer moved from
+`testnet.arcscan.app` to `explorer.testnet.arc.io` (the old domain redirects).
 
 | Contract | Address | Role |
 |---|---|---|
-| MandateRegistry | [`0x1413...CAed9`](https://testnet.arcscan.app/address/0x1413981c976694e12c200985ed9f1d70cf2caed9) | Layer 1 — budget/limits/approvals per agent |
-| PolicyEngine | [`0x303B...F6ADD`](https://testnet.arcscan.app/address/0x303b31c60381b992f3dfc09036859394c03f6add) | Layer 2 — evaluates each payment, builds the constraint checklist |
-| KillSwitch | [`0x2600...4641e34`](https://testnet.arcscan.app/address/0x2600fa1d3971e0992e0685795660c95774641e34) | Layer 6 — autonomy state machine |
-| MockFXEscrow | [`0xAB2d...20f86A`](https://testnet.arcscan.app/address/0xab2d7ffe480a4456965359e3209ba3fdd420f86a) | Layer 4b — mocked cross-currency settlement |
-| SettlementRouter | [`0xD8da...07d7848`](https://testnet.arcscan.app/address/0xd8da95168ba9ee8600c2373c853b664e207d7848) | Layer 3 — orchestrates policy check → settlement |
-| MockUSDC | [`0x41A0...6808E`](https://testnet.arcscan.app/address/0x41a069bdb1fde2b5ad54f2c96cd38b5da9e6808e) | Demo home currency |
-| MockCNGN | [`0x4220...C7b43`](https://testnet.arcscan.app/address/0x4220880b42cc4eae952078bc682b880d821c7b43) | Demo settlement currency |
+| MandateRegistry | [`0x1413...CAed9`](https://explorer.testnet.arc.io/address/0x1413981c976694e12c200985ed9f1d70cf2caed9) | Layer 1 — budget/limits/approvals per agent |
+| PolicyEngine | [`0x303B...F6ADD`](https://explorer.testnet.arc.io/address/0x303b31c60381b992f3dfc09036859394c03f6add) | Layer 2 — evaluates each payment, builds the constraint checklist |
+| KillSwitch | [`0x2600...4641e34`](https://explorer.testnet.arc.io/address/0x2600fa1d3971e0992e0685795660c95774641e34) | Layer 6 — autonomy state machine |
+| MockFXEscrow | [`0xAB2d...20f86A`](https://explorer.testnet.arc.io/address/0xab2d7ffe480a4456965359e3209ba3fdd420f86a) | Layer 4b — mocked cross-currency settlement |
+| SettlementRouter | [`0xD8da...07d7848`](https://explorer.testnet.arc.io/address/0xd8da95168ba9ee8600c2373c853b664e207d7848) | Layer 3 — orchestrates policy check → settlement |
+| MockUSDC | [`0x41A0...6808E`](https://explorer.testnet.arc.io/address/0x41a069bdb1fde2b5ad54f2c96cd38b5da9e6808e) | Demo home currency (freely mintable test token) |
+| MockCNGN | [`0x4220...C7b43`](https://explorer.testnet.arc.io/address/0x4220880b42cc4eae952078bc682b880d821c7b43) | Demo settlement currency (freely mintable test token) |
 
-Demo mandate agent: `0x8e13EA90eab71981f5cbBC3719F7D238D2C12453` (Arc testnet). Also deployed to
-Ethereum Sepolia (chain `11155111`) as a fallback — same contract addresses, different demo
-agent (`0xb6d1D5EE3d424C58c8B0cF791800bAdF0Eddc91C`, has spend history from earlier testing) —
-see `frontend/src/lib/addresses.ts` and `frontend/src/lib/demoData.ts`.
+Demo agent (Circle developer-controlled wallet):
+[`0xaa8437e8df6e3edfed3f9585e31c168200f16d1a`](https://explorer.testnet.arc.io/address/0xaa8437e8df6e3edfed3f9585e31c168200f16d1a).
+Also deployed to Ethereum Sepolia (chain `11155111`) as a fallback — same addresses; see
+`frontend/src/lib/addresses.ts`.
 
 ## Layout
 
 ```
 contracts/     Foundry project: MandateRegistry, PolicyEngine, KillSwitch, MockFXEscrow, SettlementRouter
-frontend/      Vite + React + TS dashboard: mandate status, autonomy meter, explainability, freeze controls
-circle-wallet/ Scripts that make a Circle developer-controlled wallet the agent identity on Arc
-               testnet, and prove a settlePayment call signed entirely server-side (no MetaMask)
-docs/          Build brief and design notes
+frontend/      Vite + React + TS dashboard: mandate, autonomy meter, dry-run explainability, audit trail
+circle-wallet/ Node scripts: Circle developer-controlled wallet as the agent; demo scenarios; one-command reset
+docs/          Build brief, current pitch, build notes
 ```
+
+## The Circle wallet demo
+
+`circle-wallet/` runs the whole story against Arc testnet with the agent signed by Circle. Setup once
+(needs a free Circle sandbox API key — see [circle-wallet/README.md](circle-wallet/README.md)), then:
+
+```bash
+cd circle-wallet
+npm run new-agent      # fresh Circle wallet + clean mandate + funding + approval (~40s); prints a dashboard link
+npm run demo:same      # 10 USDC to an approved vendor          -> APPROVED
+npm run demo:fx        # 10 USDC, vendor settles in cNGN        -> APPROVED, 14,925 cNGN, 0.50% spread
+npm run demo:deny      # 600 USDC vs a 500 USDC per-tx limit     -> DENIED, names the failed check
+npm run demo:freeze    # principal freezes the agent
+npm run demo:same      # a perfectly valid payment              -> DENIED (kill-switch)
+npm run demo:restore   # principal restores it
+npm run status         # ground truth from the chain: spend, kill-switch state, balances
+```
+
+Each script reads the transaction's actual events to say APPROVED or DENIED. That matters: a denial
+is a *successful* transaction by design (the router emits `PaymentDenied` and returns `false`
+instead of reverting, so the kill-switch keeps its state), so Circle reporting `COMPLETE` proves
+only that the call landed.
+
+Spend on a mandate only ever increments — there is deliberately no reset function — so "reset the
+demo" means `npm run new-agent`.
 
 ## Contracts
 
@@ -58,20 +100,23 @@ cp .env.example .env                     # fill in DEPLOYER_PRIVATE_KEY (use an 
 forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
-Deploy to Arc testnet (chain `5042002`, RPC hardcoded in `foundry.toml`, gas paid in USDC — fund
-a deployer via https://faucet.circle.com):
+Deploy to Arc testnet (RPC in `foundry.toml`, gas paid in USDC — fund a deployer via
+https://faucet.circle.com):
 
 ```bash
 DEPLOYER_PRIVATE_KEY=0x... forge script script/Deploy.s.sol --rpc-url arc_testnet --broadcast
 ```
 
-Verify on Arcscan (Blockscout — no API key needed) per contract:
+Verify on the Arc explorer (Blockscout — no API key needed) per contract:
 
 ```bash
 forge verify-contract <address> <path>:<ContractName> --rpc-url arc_testnet \
-  --verifier blockscout --verifier-url https://testnet.arcscan.app/api/ \
+  --verifier blockscout --verifier-url https://explorer.testnet.arc.io/api/ \
   --constructor-args $(cast abi-encode "constructor(...)" <args>)
 ```
+
+(The verifier URL moved with the explorer; the contracts above were verified against the old
+domain and this exact command has not been re-run since the move.)
 
 The script deploys the full stack, wires the router into the registry/kill-switch, deploys demo
 MockUSDC/MockCNGN tokens, and seeds the FX escrow with a starting USDC→cNGN rate. Copy the logged
@@ -87,30 +132,31 @@ cp .env.example .env # set VITE_DEFAULT_CHAIN_ID (5042002 for Arc testnet, 31337
 npm run dev
 ```
 
-Read-only views (mandate status, autonomy meter, audit trail) work without a connected wallet —
-they fall back to `VITE_DEFAULT_CHAIN_ID`, and default to showing the seeded demo agent
-(`frontend/src/lib/demoData.ts`). Sending a payment, approving the router, or triggering the
-kill-switch requires connecting a wallet on that same chain.
+Read-only views work without a connected wallet. The audit trail reads from the Arc explorer's REST
+API (one request) and falls back to a recent-window RPC scan if the explorer is unreachable — full
+RPC scans of the chain since deployment stopped being viable as the chain grew (see build notes).
+Sending a payment from the browser only works for an agent whose own wallet is connected; Circle
+agents sign server-side.
 
 ## Status
 
-V1 is fully built, deployed and verified on real Arc testnet, and demoed end-to-end with a real
-connected wallet (MetaMask): direct payment, cross-currency atomic FX settlement, a clean policy
-denial, and a kill-switch freeze that then blocks a subsequent (otherwise valid) payment — the
-full demo script in the build brief (§9). Remaining before mainnet: wire up real Circle
-developer-controlled wallets as the agent identity (currently any address that can call
-`SettlementRouter.settlePayment` works — tested with a plain EOA), and swap `MockFXEscrow` for
-real StableFX once Circle grants KYB access.
+V1 is built, deployed and verified on Arc testnet, with a Circle developer-controlled wallet as the
+agent, and demoed end to end: same-currency payment, cross-currency FX settlement, policy denial
+with the failed check named, and a kill-switch freeze that blocks an otherwise-valid payment.
 
-## What's mocked (V1) vs. real (V2)
+## What's mocked vs. real
 
-- **FX leg is mocked** (`MockFXEscrow`) behind the exact interface shape StableFX exposes
-  (`IFXEscrow`), so swapping in real StableFX later is a constructor argument change to
-  `SettlementRouter`, not a rewrite. StableFX requires Circle KYB/AML approval — see build brief §5, §7.
-- **Kill-switch is rule-based** (transaction velocity + currency-probing counters in fixed time
-  windows), not adaptive/ML — deliberately explainable per the V1 scope decision.
-- **No privacy layer yet** — Arc's opt-in privacy is roadmap, not shipped. Contracts are laid out
-  so it can attach later (see build brief §5, Layer 7) without changing mandate/escrow logic.
-- **Circle developer-controlled wallets**: the contracts treat the agent as any address that can
-  call `SettlementRouter.settlePayment`; wiring an actual Circle developer-controlled wallet as
-  that address is an integration step, not a contract change.
+- **Real:** the mandate, policy engine, settlement router and kill-switch contracts; the Circle
+  developer-controlled wallet signing real transactions on Arc testnet; the on-chain audit events.
+- **Mocked — tokens:** "USDC" and "cNGN" are freely mintable test tokens (`MockERC20`), not Circle's
+  USDC or the real cNGN. Nothing here moves real value.
+- **Mocked — FX:** `MockFXEscrow` is a static, owner-set rate table (1 USDC = 1,500 cNGN, 50 bps
+  spread) funded by the deployer. It is **not** StableFX. Real StableFX quotes come from an
+  off-chain API and settle through an asynchronous, two-sided escrow funded with Permit2
+  signatures — not a single view-quote-then-settle call — so integrating it is a real piece of
+  work, not a constructor argument (see [docs/pitch-v2.md](docs/pitch-v2.md)). `IFXEscrow`'s comments
+  claiming otherwise are left as-is because editing them would break the byte-for-byte match with
+  the verified deployment.
+- **Rule-based kill-switch:** transaction velocity and currency-probing counters in fixed 5-minute
+  windows — deliberately simple and explainable, not adaptive or ML.
+- **No privacy layer yet** — Arc's opt-in privacy is roadmap, not built into these contracts.

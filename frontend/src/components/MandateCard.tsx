@@ -11,9 +11,11 @@ type Props = {
   // Bumped by the parent after this browser's own writes settle, so the mandate refetches
   // immediately without needing continuous background polling (see App.tsx).
   refreshOn?: number;
+  // True when this agent's payments are signed server-side by a Circle developer-controlled wallet.
+  agentIsCircle?: boolean;
 };
 
-export function MandateCard({ agent, refreshOn }: Props) {
+export function MandateCard({ agent, refreshOn, agentIsCircle }: Props) {
   const chainId = useActiveChainId();
   const addresses = getAddresses(chainId);
 
@@ -84,6 +86,10 @@ export function MandateCard({ agent, refreshOn }: Props) {
       <LimitBar label="Daily limit" spent={mandate.spentToday} cap={mandate.dailyLimit} fmt={fmt} />
 
       <dl className="kv">
+        <dt>Agent</dt>
+        <dd className="mono">{agent}</dd>
+        <dt>Agent wallet</dt>
+        <dd>{agentIsCircle ? "Circle developer-controlled wallet — signs server-side" : "External wallet"}</dd>
         <dt>Per-transaction cap</dt>
         <dd>{fmt(mandate.perTxLimit)}</dd>
         <dt>Restricted-mode cap</dt>

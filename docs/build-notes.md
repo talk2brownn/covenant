@@ -32,6 +32,71 @@ Circle's docs got wrong enough to be worth recording:
   installed SDK's own enum (`Blockchain.ArcTestnet = "ARC-TESTNET"`), not just inferred from
   example code this time.
 
+Found running it for real against a live Circle account (2026-09-16), none of which the
+credential-less smoke test could have caught:
+
+- **`registerEntitySecretCiphertext`'s `recoveryFileDownloadPath` is a directory, and it must
+  already exist.** Passing a filename fails with `ENOENT ... covenant-recovery-file.json\recovery_
+  file_<uuid>.dat` — the SDK appends its own filename. By then the secret was already generated
+  and printed, so the fix was to register that same secret again (idempotent for the same value)
+  instead of generating a second one.
+- **An empty env var isn't `undefined`.** `PRINCIPAL_ADDRESS=` in `.env` is `""`, so
+  `process.env.X ?? fallback` never fell back and viem crashed with `Address "" is invalid`.
+- **An uncaught SDK error prints the whole minified bundle** as its stack trace (axios is inlined),
+  burying the real message. One run failed this way and was not repeatable — `npm run status`
+  showed exactly one payment had landed, so it never reached the chain. Hence `formatCircleError`
+  and the "run status before retrying" note.
+- **`https://rpc.testnet.arc.io` timed out the day these ran** and answered fine a few days later;
+  public Arc RPCs are flaky, hence the multi-provider fallback in the frontend and `ARC_RPC_URL`
+  override in the scripts.
+- **Circle's console faucet only funds Circle-managed wallets.** An external address (like the
+  principal key) needs the *Public Faucet* link — 20 testnet USDC, enough for ~9 fresh agents at
+  ~2 USDC of gas each.
+
+## Dashboard: the audit trail kept breaking, for a third different reason
+
+Scanning `eth_getLogs` over public RPC from the deploy block stopped being viable. Three weeks after
+deployment Arc had ~3.5M more blocks (~0.55s each), i.e. ~750 sequential 9,500-block calls per
+refresh. Then re-testing showed dRPC's free tier rejecting **every** `eth_getLogs` — even a
+500-block window — with "ranges over 10000 blocks", although the same 9,500-block windows worked
+three weeks earlier. The other four public Arc endpoints all answered log queries in ~1.5s that
+day. Provider rules change underneath you.
+
+The audit trail now reads from the Arc explorer's REST API (Blockscout v2) in one request and
+filters by agent in the browser (both event types index the agent as `topic1`), falling back to a
+*recent-window* RPC scan (~24h) if the explorer is down. Getting there hit three explorer traps,
+each invisible from Node and only visible in a real browser or under load:
+
+1. **The explorer moved** from `testnet.arcscan.app` to `explorer.testnet.arc.io`. The old domain
+   301-redirects, and a redirect response has no CORS headers, so browsers block the call even
+   though `curl -L` and Node `fetch` work. Call the new host directly.
+2. **The Etherscan-compatible `/api?module=logs` endpoint is limited to 10 requests per ~35
+   minutes per IP** (`x-ratelimit-limit: 10`, reset ~2,000,000 ms). Two dev tabs exhausted it and
+   then the app fell into the hopeless RPC scan. The REST v2 endpoints allow 180 requests per ~12s.
+3. **`document.visibilityState` is `"hidden"` for a covered window**, so "live" polling silently
+   paused (in the test pane it looked like the feature was broken). Fixed by also refreshing on
+   `visibilitychange`. Live mode is opt-in so an audience opening the public link doesn't multiply
+   load.
+
+Related: the dashboard now also (a) shows *why* a payment was denied inside the audit trail (the
+reason is in the `PaymentDenied` event — before, it said "see explainability checklist", which only
+exists in the live dry-run), and (b) explains, instead of showing a broken "Send Payment" button,
+that a Circle-signed agent can't be paid from the browser (`settlePayment` requires
+`msg.sender == agent`).
+
+## StableFX: what "interface-matched" got wrong
+
+The brief, the README and `IFXEscrow.sol`'s NatSpec claim `IFXEscrow` matches StableFX's shape so
+swapping in the real thing is "a config change." Reading Circle's StableFX technical guide
+(2026-09-21) shows it isn't: quotes are an **off-chain API** (min 10 USDC; instant/hourly/daily
+tenors); accepting one locks the rate; both parties sign within a 10-minute window; and settlement
+is an **asynchronous, multi-step** on-chain `FxEscrow` process (`pending_settlement` →
+`taker_funded` → settled — the taker funds through a Permit2 EIP-712 signature, then the maker
+funds). It isn't one synchronous view-quote-then-settle call like `IFXEscrow`, and the quote can't
+be read on-chain by `PolicyEngine`. A real integration means an adapter plus a policy gate in front
+of the taker's signature. The docs are corrected; the `IFXEscrow.sol` comment is deliberately left
+as-is so the repo source stays byte-identical to the verified deployment.
+
 ## Contracts
 
 - **Denials do not revert the transaction.** `SettlementRouter.settlePayment` returns

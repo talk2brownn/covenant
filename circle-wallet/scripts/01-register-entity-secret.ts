@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import "dotenv/config";
@@ -25,14 +26,19 @@ const entitySecret = randomBytes(32).toString("hex");
 console.log("\nGenerated a new entity secret (shown once — save it now):\n");
 console.log(entitySecret);
 
-const recoveryPath = path.join(os.homedir(), ".circle", "covenant-recovery-file.json");
+// recoveryFileDownloadPath is a DIRECTORY, not a target filename — the SDK generates its own
+// recovery_file_<uuid>.dat name underneath it, and fails with a confusing ENOENT if the path
+// looks like a file or the directory doesn't already exist (it won't create it). Learned live
+// registering the real entity secret on 2026-09-16.
+const recoveryDir = path.join(os.homedir(), ".circle");
+await fs.mkdir(recoveryDir, { recursive: true });
 const response = await registerEntitySecretCiphertext({
   apiKey,
   entitySecret,
-  recoveryFileDownloadPath: recoveryPath,
+  recoveryFileDownloadPath: recoveryDir,
 });
 
-console.log(`\nRegistered with Circle. Recovery file saved to:\n${recoveryPath}`);
+console.log(`\nRegistered with Circle. Recovery file saved under:\n${recoveryDir}`);
 console.log("Store that file somewhere safe outside this repo — Circle support needs it if the");
 console.log("entity secret is ever lost. Full response for reference:\n");
 console.log(JSON.stringify(response.data, null, 2));

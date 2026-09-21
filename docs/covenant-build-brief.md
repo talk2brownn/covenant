@@ -4,6 +4,10 @@
 > "gap nobody occupies." That's no longer accurate — Circle's own Agent Wallets already ship most
 > of this as a first-party product. See [`pitch-v2.md`](pitch-v2.md) for the corrected framing.
 > Kept below unedited for provenance (this is the user's original brief).
+>
+> Also wrong: §5 and §8 say mocking StableFX's interface makes the real swap "a config change, not a
+> rewrite." Real StableFX is an off-chain quote API plus an asynchronous, two-sided Permit2 escrow —
+> a real integration project. See the FX section of `pitch-v2.md`.
 
 **One system. One team. Two internal layers: authorization and settlement.**
 

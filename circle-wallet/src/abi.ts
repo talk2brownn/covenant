@@ -1,6 +1,6 @@
-// Minimal ABI fragments — only the functions these scripts actually call. Kept hand-written
-// and small rather than pulling in the full compiled artifact, since circle-wallet is meant
-// to stand alone from the contracts/ Foundry project's build output.
+// Minimal ABI fragments — only the functions/events these scripts actually use. Kept
+// hand-written and small rather than pulling in the full compiled artifacts, since
+// circle-wallet is meant to stand alone from the contracts/ Foundry project's build output.
 
 export const mandateRegistryAbi = [
   {
@@ -42,6 +42,47 @@ export const mandateRegistryAbi = [
       { name: "approved", type: "bool" },
     ],
     outputs: [],
+  },
+  {
+    type: "function",
+    name: "setCurrencyApproval",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agent", type: "address" },
+      { name: "token", type: "address" },
+      { name: "approved", type: "bool" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "approvedCounterparties",
+    stateMutability: "view",
+    inputs: [
+      { name: "", type: "address" },
+      { name: "", type: "address" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "approvedCategories",
+    stateMutability: "view",
+    inputs: [
+      { name: "", type: "address" },
+      { name: "", type: "bytes32" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "approvedCurrencies",
+    stateMutability: "view",
+    inputs: [
+      { name: "", type: "address" },
+      { name: "", type: "address" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
   },
   {
     type: "function",
@@ -100,5 +141,91 @@ export const mockErc20Abi = [
       { name: "spender", type: "address" },
     ],
     outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
+// KillSwitch.Status enum: 0 = Autonomous, 1 = Restricted, 2 = Frozen
+export const killSwitchAbi = [
+  {
+    type: "function",
+    name: "status",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "address" }],
+    outputs: [{ name: "", type: "uint8" }],
+  },
+  {
+    type: "function",
+    name: "manualFreeze",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "agent", type: "address" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "manualRestore",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agent", type: "address" },
+      { name: "restoredTo", type: "uint8" },
+    ],
+    outputs: [],
+  },
+] as const;
+
+export const STATUS_LABELS = ["Autonomous", "Restricted", "Frozen"] as const;
+
+// PolicyEngine.CheckId enum, in declaration order — used to name failed checks in a denial.
+export const CHECK_LABELS = [
+  "Kill-switch not frozen",
+  "Mandate active",
+  "Within valid period",
+  "Per-transaction limit",
+  "Daily limit",
+  "Total budget",
+  "Counterparty approved",
+  "Category approved",
+  "Currency approved",
+  "FX slippage within tolerance",
+] as const;
+
+export const routerEventsAbi = [
+  {
+    type: "event",
+    name: "PaymentSettled",
+    inputs: [
+      { name: "agent", type: "address", indexed: true },
+      { name: "counterparty", type: "address", indexed: true },
+      { name: "category", type: "bytes32", indexed: false },
+      { name: "settlementToken", type: "address", indexed: false },
+      { name: "homeCurrencyAmount", type: "uint256", indexed: false },
+      { name: "settlementAmount", type: "uint256", indexed: false },
+      { name: "wasFx", type: "bool", indexed: false },
+      { name: "fxSpreadBps", type: "uint16", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "PaymentDenied",
+    inputs: [
+      { name: "agent", type: "address", indexed: true },
+      { name: "counterparty", type: "address", indexed: true },
+      {
+        name: "decision",
+        type: "tuple",
+        indexed: false,
+        components: [
+          { name: "approved", type: "bool" },
+          {
+            name: "checklist",
+            type: "tuple[10]",
+            components: [
+              { name: "id", type: "uint8" },
+              { name: "passed", type: "bool" },
+              { name: "detail", type: "string" },
+            ],
+          },
+        ],
+      },
+    ],
   },
 ] as const;

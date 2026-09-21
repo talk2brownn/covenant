@@ -1,77 +1,82 @@
 # circle-wallet
 
-Makes a Circle developer-controlled wallet the Covenant agent identity on Arc testnet, then
-proves a `SettlementRouter.settlePayment` call signed entirely server-side — no MetaMask, no
-browser, no human clicking "confirm." This replaces the plain EOA burner key
-(`0xb6d1D5EE3d424C58c8B0cF791800bAdF0Eddc91C`) the demo has used as the agent so far.
+Makes a Circle developer-controlled wallet the Covenant agent identity on Arc testnet and runs the
+demo scenarios against it. Every payment the agent makes is signed server-side by Circle's API — no
+MetaMask, no browser, no human clicking "confirm."
 
-Every SDK call here is copied from Circle's own official reference examples
-([circlefin/skills](https://github.com/circlefin/skills), Sept 2026) — field names like
-`response.data?.wallets`, `response.data?.transaction?.state`/`.txHash`, and the
-`INITIATED → CLEARED → QUEUED → SENT → CONFIRMED → COMPLETE` transaction lifecycle are
-confirmed against those docs, not guessed. Where a script logs a full raw response object,
-that's deliberate — verify the shape live rather than trusting a remembered field name (see
-`../docs/build-notes.md` for why that habit matters on this project specifically).
+This is a separate Node project, not part of `frontend/`, because Circle's API key and entity secret
+can sign transactions that move funds — none of that may ship to a browser.
 
-## The one step only you can do
+## First-time setup (once)
 
-1. Sign up at [console.circle.com](https://console.circle.com) (free) and create a
-   **sandbox/testnet API key**.
-2. `cd circle-wallet && npm install`
-3. `cp .env.example .env`
-4. Paste your key into `.env` as `CIRCLE_API_KEY`, and copy the existing Arc deployer key from
-   `../contracts/.env`'s `DEPLOYER_PRIVATE_KEY` into `.env` here too (same key — it already
-   holds Arc gas from the original deploy).
+1. Create a free **sandbox/testnet API key** at [console.circle.com](https://console.circle.com)
+   (Testnet toggle → Keys).
+2. `cd circle-wallet && npm install && cp .env.example .env`
+3. Put the key in `.env` as `CIRCLE_API_KEY`. Put a funded Arc testnet private key in
+   `DEPLOYER_PRIVATE_KEY` — it acts as the mandate's principal (the human who can freeze the agent)
+   and pays for setup transactions. Fund a fresh one at https://faucet.circle.com ("Public Faucet"
+   — the console faucet only funds Circle-managed wallets).
+4. `npm run 01-register-entity-secret` — generates and registers your entity secret. **Copy the
+   secret it prints into `.env` as `CIRCLE_ENTITY_SECRET` and back up the recovery file it writes
+   under `~/.circle/`.** Run this once per API key; running it again rotates the secret and orphans
+   existing wallets.
+5. `npm run new-agent` — creates a wallet, mandate, funding and approval in one go (~40s). It
+   updates `.env` for you and prints a ready-to-open dashboard link.
 
-Everything after that is scripted, in order:
+## Demo scenarios
 
 ```bash
-npm run 01-register-entity-secret   # prints a value + recovery file path — paste value into .env
-npm run 02-create-wallet            # prints 3 values — paste all into .env
-npm run 03-create-mandate           # creates the on-chain mandate for the new Circle wallet
-npm run 04-fund-wallet              # sends Arc gas + mints demo MockUSDC to it
-npm run 05-approve-router           # agent approves SettlementRouter to spend its MockUSDC
-npm run 06-settle-payment           # the actual server-signed settlePayment call
-npm run status                      # ground-truth check: real mandate spend + balances on-chain
+npm run demo:same      # 10 USDC to an approved vendor          -> APPROVED
+npm run demo:fx        # 10 USDC, vendor settles in cNGN        -> APPROVED (14,925 cNGN, 0.50% spread)
+npm run demo:deny      # 600 USDC vs a 500 USDC per-tx limit     -> DENIED, names the failed check
+npm run demo:freeze    # the principal freezes the agent
+npm run demo:same      # a valid payment                        -> DENIED: kill-switch
+npm run demo:restore   # the principal restores it
+npm run status         # ground truth from the chain
+npm run new-agent      # reset: brand-new agent with a clean 0-spent mandate
 ```
 
-Steps 1–2 are idempotent (they check `.env` first and skip if already done) so re-running the
-whole sequence after pasting values in is safe. Steps 3–6 talk to the real Arc testnet and cost
-real (testnet) gas each time — 03/04 skip if the mandate/funds already exist, but 05/06 submit a
-fresh transaction every run.
+The freeze/restore steps are signed by the principal key, not the Circle wallet — the agent can
+never unfreeze itself.
 
-## What "paste and go" means here, precisely
+**Pace yourself:** the kill-switch counts attempts (approved or denied) in 5-minute windows and
+downgrades the agent to *Restricted* (per-tx cap drops to 100 USDC) at 5 attempts and *Frozen* at
+10. A full run of the scenarios above is 4 attempts, so one extra attempt (a retry, a rehearsal
+click) inside the same five minutes tips it to Restricted. Wait five minutes between full runs or
+use `npm run new-agent`. Each new agent also costs the principal key ~2 testnet USDC in gas.
 
-Only three things require copying a printed value back into `.env`: the entity secret (step 1)
-and the wallet set id / wallet id / wallet address (step 2). Every other script reads
-everything it needs from `.env` and the contract addresses in `src/config.ts` — no code edits
-required for a first run against Arc testnet.
+## Why each script reads events
 
-## Why this needs its own package, not a frontend addition
+`demo:*` scripts don't stop at Circle's transaction state. A denied payment is a *successful*
+transaction by design (`SettlementRouter` emits `PaymentDenied` and returns `false` rather than
+reverting, so the kill-switch keeps its state), so Circle's `COMPLETE` only proves the call landed.
+The scripts decode the router's `PaymentSettled` / `PaymentDenied` event and report which happened.
 
-Circle's SDK holds real secrets — the API key and entity secret can sign transactions that move
-funds. None of that can go in `frontend/`, which ships to a browser. This is a separate Node
-project that only ever runs on a trusted machine (your machine, or eventually a real backend),
-the same reason SIGNAL keeps its own backend separate from its React frontend.
+## Step-by-step scripts
 
-## What changes for the demo once this is done
+`new-agent` is these in order: `02-create-wallet`, `03-create-mandate` (idempotent; also adds the
+cNGN vendor and currency approvals), `04-fund-wallet` (Arc gas + demo MockUSDC), `05-approve-router`
+(the agent approves the router as a spender — signed by Circle).
 
-The agent address in `frontend/src/lib/demoData.ts` (`DEMO_AGENT`) currently points at a plain
-EOA. Once this integration is verified end to end, update it to `CIRCLE_WALLET_ADDRESS` from
-this package's `.env` — the frontend's read-only views (mandate status, audit trail) work
-unchanged, since they only ever read `agent` as an address; they don't care what signs for it.
-Routing an order *through the UI* with this wallet would additionally need a small backend
-endpoint that calls `createContractExecutionTransaction` on request (this package's scripts
-call it directly instead, which is enough to prove the integration works before building that
-endpoint).
+## Findings about the SDK (verified against the installed package, not the docs)
+
+- `generateEntitySecret()` prints to the console and returns `void`; the script generates the same
+  value directly with Node's `crypto`.
+- `registerEntitySecretCiphertext`'s `recoveryFileDownloadPath` is a **directory that must already
+  exist**; passing a filename fails with a confusing `ENOENT`.
+- `bytesToHex`/`randomBytes` type-check but aren't exported at runtime.
+- `getTransaction({ id, waitForState: "COMPLETE" })` polls server-side — no hand-rolled loop.
+- An uncaught SDK error dumps the whole minified bundle as its stack trace; `formatCircleError`
+  extracts the useful part.
+- `"ARC-TESTNET"` is a real `Blockchain` value.
+
+More in [../docs/build-notes.md](../docs/build-notes.md).
 
 ## Troubleshooting
 
-- **A script exits with "Unexpected response — ... Full response:"** — Circle's API shape
-  didn't match what this script expected. Read the printed JSON, find the right field, and
-  fix the one line that reads it — don't guess a second time, look at what's actually there.
-- **`settlePayment` transaction reaches `COMPLETE` but `npm run status` shows `spentTotal`
-  unchanged** — the call landed on-chain but the policy engine denied it (see the comment in
-  `scripts/06-settle-payment.ts`; `SettlementRouter.sol` returns `false`/emits `PaymentDenied`
-  rather than reverting, by design). Check `tx.txHash` on Arcscan for the emitted event to see
-  which check failed.
+- **"Unexpected response"** — Circle's API shape didn't match what a script expected. Read the
+  printed JSON and fix the one line that reads it.
+- **A `demo:*` script errors after "Submitted to Circle"** — run `npm run status` before retrying;
+  check whether spend changed, so you don't double-submit.
+- **RPC timeouts** — `src/config.ts` defaults to dRPC's Arc endpoint; override with `ARC_RPC_URL`
+  in `.env`. Public endpoints are flaky.
