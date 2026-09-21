@@ -66,8 +66,10 @@ docs/          Build brief, current pitch, build notes
 ```bash
 cd circle-wallet
 npm run new-agent      # fresh Circle wallet + clean mandate + funding + approval (~40s); prints a dashboard link
+npm run demo           # guided tour of everything below: press Enter per step, ~3 minutes
 npm run demo:same      # 10 USDC to an approved vendor          -> APPROVED
 npm run demo:fx        # 10 USDC, vendor settles in cNGN        -> APPROVED, 14,925 cNGN, 0.50% spread
+npm run demo:attacker  # 50 USDC to an unapproved address         -> DENIED (prompt-injection story)
 npm run demo:deny      # 600 USDC vs a 500 USDC per-tx limit     -> DENIED, names the failed check
 npm run demo:freeze    # principal freezes the agent
 npm run demo:same      # a perfectly valid payment              -> DENIED (kill-switch)

@@ -12,6 +12,8 @@
     "06-settle-payment": "tsx scripts/06-settle-payment.ts",
     "status": "tsx scripts/07-check-status.ts",
     "new-agent": "tsx scripts/new-agent.ts",
+    "demo": "tsx scripts/tour.ts",
+    "demo:attacker": "tsx scripts/12-unapproved-vendor.ts",
     "demo:same": "tsx scripts/06-settle-payment.ts",
     "demo:fx": "tsx scripts/08-cross-currency-payment.ts",
     "demo:deny": "tsx scripts/09-denied-payment.ts",

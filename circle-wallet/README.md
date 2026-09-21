@@ -25,9 +25,17 @@ can sign transactions that move funds — none of that may ship to a browser.
 
 ## Demo scenarios
 
+**For presenting: `npm run demo`** — a guided tour. It prints a one-line "say this" for each step and
+waits for Enter, so nobody types commands on stage (`q` quits; `-- --auto` runs it unattended).
+Run `npm run new-agent` first so the mandate starts at 0 spent. The steps are the individual
+scenarios below, in the order that tells the story: starting point → same-currency → cross-currency
+→ prompt-injected payment to an unapproved address → over-limit → freeze → valid payment blocked →
+restore → on-chain ground truth. About three minutes.
+
 ```bash
 npm run demo:same      # 10 USDC to an approved vendor          -> APPROVED
 npm run demo:fx        # 10 USDC, vendor settles in cNGN        -> APPROVED (14,925 cNGN, 0.50% spread)
+npm run demo:attacker  # 50 USDC to an unapproved address         -> DENIED: counterparty not approved
 npm run demo:deny      # 600 USDC vs a 500 USDC per-tx limit     -> DENIED, names the failed check
 npm run demo:freeze    # the principal freezes the agent
 npm run demo:same      # a valid payment                        -> DENIED: kill-switch
@@ -41,8 +49,8 @@ never unfreeze itself.
 
 **Pace yourself:** the kill-switch counts attempts (approved or denied) in 5-minute windows and
 downgrades the agent to *Restricted* (per-tx cap drops to 100 USDC) at 5 attempts and *Frozen* at
-10. A full run of the scenarios above is 4 attempts, so one extra attempt (a retry, a rehearsal
-click) inside the same five minutes tips it to Restricted. Wait five minutes between full runs or
+10. The guided tour makes 5 attempts, 4 of them before the freeze, so one extra attempt (a retry, a
+rehearsal click) inside the same five minutes tips it to Restricted. Wait five minutes between full runs or
 use `npm run new-agent`. Each new agent also costs the principal key ~2 testnet USDC in gas.
 
 ## Why each script reads events
