@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {MandateRegistry} from "./MandateRegistry.sol";
 import {KillSwitch} from "./KillSwitch.sol";
+import {MandateVault} from "./MandateVault.sol";
 
 /// @title PolicyEngine
 /// @notice Layer 2 — evaluates a payment request against an agent's mandate before any funds
@@ -21,7 +22,8 @@ contract PolicyEngine {
         CounterpartyApproved,
         CategoryApproved,
         CurrencyApproved,
-        FxSlippageWithinTolerance
+        FxSlippageWithinTolerance,
+        FundsInVault
     }
 
     struct CheckResult {
@@ -32,15 +34,17 @@ contract PolicyEngine {
 
     struct PolicyDecision {
         bool approved;
-        CheckResult[10] checklist;
+        CheckResult[11] checklist;
     }
 
     MandateRegistry public immutable registry;
     KillSwitch public immutable killSwitch;
+    MandateVault public immutable vault;
 
-    constructor(MandateRegistry _registry, KillSwitch _killSwitch) {
+    constructor(MandateRegistry _registry, KillSwitch _killSwitch, MandateVault _vault) {
         registry = _registry;
         killSwitch = _killSwitch;
+        vault = _vault;
     }
 
     /// @param requiresFx whether this payment needs currency conversion (settlementToken != mandate.homeCurrency)
@@ -91,6 +95,11 @@ contract PolicyEngine {
             slippageOk,
             requiresFx ? "quoted FX spread exceeds authorized tolerance" : "n/a - same currency, no conversion"
         ) && allPassed;
+
+        // Checked here rather than left to revert inside the vault: a revert would roll back the
+        // kill-switch's record of the attempt, and an underfunded payment is exactly the kind of
+        // attempt it should see.
+        allPassed = _set(decision, 10, CheckId.FundsInVault, vault.balances(agent) >= amount, "not enough funds held in the vault") && allPassed;
 
         decision.approved = allPassed;
     }

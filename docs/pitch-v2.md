@@ -44,9 +44,9 @@ identity **is** a Circle developer-controlled wallet (live on Arc testnet, 2026-
 its own `settlePayment` calls server-side through Circle's API and the on-chain policy engine
 decides whether they go through. What Covenant adds is a public, on-chain layer where the
 *policy decision itself* is a verifiable on-chain event rather than a private log entry inside a
-hosted platform. Precisely: a denied payment emits the full 10-item checklist with every failed
+hosted platform. Precisely: a denied payment emits the full 11-item checklist with every failed
 check named (`PaymentDenied`); an approved payment emits `PaymentSettled`, which by construction
-means all ten checks passed (the per-check detail for approvals is not stored — the dashboard's
+means all eleven checks passed (the per-check detail for approvals is not stored — the dashboard's
 dry-run recomputes it against current state).
 
 **The FX leg is a mock, and swapping in StableFX is real work, not a config change.** An earlier
@@ -59,6 +59,23 @@ call. Covenant's `IFXEscrow` (view quote, then `settle` in the same transaction)
 of RFQ plus payment-vs-payment, not the actual integration surface. A real integration would need
 an adapter and a policy gate in front of the taker's Permit2 signature (the wallet signs only if
 the mandate approves). That design is unbuilt; treat it as the V2 plan, not a claim.
+
+## Why the mandate can't be bypassed (since 2026-09-21)
+
+The first version had a real hole: the agent's own wallet held the tokens, so a mandate only
+constrained payments the agent chose to route through the settlement router. It could just as
+easily transfer the tokens to anyone directly, and the mandate was never consulted. "Machine-
+enforceable" was true only in a narrow sense.
+
+The budget now sits in a `MandateVault`. The agent's wallet holds only a small gas float. Money
+leaves the vault in exactly two ways: the settlement router releases it after the policy engine
+approves, or the principal withdraws what's unspent. This is demonstrated live — the agent's real
+Circle wallet tries a direct transfer, a vault withdrawal and a direct `release()`, and all three are
+refused while the vault balance stays put.
+
+What this still doesn't cover, said plainly: the agent can move its native gas float (kept to 0.5
+USDC); the owner key that controls the router's FX escrow is trusted with funds in flight to it; and
+the principal key can change limits instantly with no delay or second signer.
 
 ## What's still unverified / needs honesty going forward
 

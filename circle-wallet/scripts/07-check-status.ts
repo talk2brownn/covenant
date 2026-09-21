@@ -1,6 +1,6 @@
 import { DEMO_VENDOR_CNGN, DEMO_VENDOR_USDC, addresses, dashboardUrlFor } from "../src/config.js";
 import { mandateRegistryAbi, mockErc20Abi } from "../src/abi.js";
-import { activeAgent, readKillSwitchStatus } from "../src/steps.js";
+import { activeAgent, readKillSwitchStatus, readVaultBalance } from "../src/steps.js";
 import { publicClient } from "../src/viemClient.js";
 
 // Ground-truth check, not a trust-the-last-response check — reads the mandate, kill-switch state
@@ -11,7 +11,7 @@ const { address } = activeAgent();
 const balanceOf = (token: `0x${string}`, who: `0x${string}`) =>
   publicClient.readContract({ address: token, abi: mockErc20Abi, functionName: "balanceOf", args: [who] });
 
-const [mandate, killSwitch, agentUsdc, vendorUsdc, vendorCngn, agentNative] = await Promise.all([
+const [mandate, killSwitch, agentUsdc, vaultUsdc, vendorUsdc, vendorCngn, agentNative] = await Promise.all([
   publicClient.readContract({
     address: addresses.mandateRegistry,
     abi: mandateRegistryAbi,
@@ -20,6 +20,7 @@ const [mandate, killSwitch, agentUsdc, vendorUsdc, vendorCngn, agentNative] = aw
   }),
   readKillSwitchStatus(address),
   balanceOf(addresses.usdc, address),
+  readVaultBalance(address),
   balanceOf(addresses.usdc, DEMO_VENDOR_USDC),
   balanceOf(addresses.cngn, DEMO_VENDOR_CNGN),
   publicClient.getBalance({ address }),
@@ -33,7 +34,8 @@ console.log(`Mandate active:         ${mandate.active}`);
 console.log(`Kill-switch:            ${killSwitch}`);
 console.log(`Spent total:            ${usdc(mandate.spentTotal)} of ${usdc(mandate.totalBudget)}`);
 console.log(`Spent today:            ${usdc(mandate.spentToday)} of ${usdc(mandate.dailyLimit)}`);
-console.log(`Agent MockUSDC:         ${usdc(agentUsdc)}`);
+console.log(`Held in the vault:      ${usdc(vaultUsdc)}`);
+console.log(`Agent wallet MockUSDC:  ${usdc(agentUsdc)}  (the agent itself holds no tokens)`);
 console.log(`USDC vendor received:   ${usdc(vendorUsdc)} (cumulative, all agents)`);
 console.log(`cNGN vendor received:   ${Number(vendorCngn) / 1e6} cNGN (cumulative, all agents)`);
 console.log(`Agent native gas:       ${Number(agentNative) / 1e18} USDC`);

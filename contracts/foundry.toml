@@ -13,10 +13,20 @@ remappings = [
 ]
 
 [rpc_endpoints]
-arc_testnet = "https://rpc.testnet.arc.io"
+# rpc.testnet.arc.io (the docs-listed endpoint) timed out on 2026-09-16 and answered on other days;
+# Blockdaemon's endpoint was the reliable one for the 2026-09-21 deployment.
+arc_testnet = "https://rpc.blockdaemon.testnet.arc.io"
 
-# Arc testnet's explorer (testnet.arcscan.app) is Blockscout-based, verified via:
-# forge verify-contract <address> <contract> --rpc-url arc_testnet --verifier blockscout --verifier-url https://testnet.arcscan.app/api/
+# Arc's explorer is Blockscout at explorer.testnet.arc.io (testnet.arcscan.app now redirects).
+# Verify with:
+#   forge verify-contract <address> <path>:<Name> --rpc-url arc_testnet --verifier blockscout \
+#     --verifier-url https://explorer.testnet.arc.io/api/ --constructor-args $(cast abi-encode ...)
+# Caveat: that /api endpoint allows only ~10 requests per ~34 minutes per IP, so a batch of
+# verifications gets cut off partway. The REST v2 endpoint has no such limit — submit the compiler
+# input directly:
+#   forge verify-contract <address> <path>:<Name> --show-standard-json-input > input.json
+#   curl -X POST https://explorer.testnet.arc.io/api/v2/smart-contracts/<address>/verification/via/standard-input \
+#     -F compiler_version=v0.8.24+commit.e11b9ed9 -F license_type=mit -F "files[0]=@input.json;type=application/json"
 [etherscan]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

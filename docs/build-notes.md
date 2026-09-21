@@ -3,6 +3,62 @@
 Running log of non-obvious decisions and gotchas hit while building Covenant V1. The build brief
 (`covenant-build-brief.md`) is the spec; this file is what we learned building against it.
 
+## MandateVault: closing the bypass (2026-09-21)
+
+**The hole:** with the agent's own wallet holding the tokens, the mandate only constrained payments
+routed through `SettlementRouter`. The agent could `transfer` the tokens anywhere and the mandate
+was never consulted — "machine-enforceable" was only true for payments the agent chose to route.
+
+**The fix:** `MandateVault` holds each agent's budget. Money leaves via `release` (router only,
+after the policy engine approves) or `withdraw` (principal only). The agent's wallet keeps a 0.5 USDC
+gas float and nothing else. Requires a full redeploy — the router now pays from the vault — and the
+old stack's owner key is gone from this machine, so the old registry/router couldn't be repointed
+anyway. The old stack is still on chain, unused (addresses in the README).
+
+Design decisions worth remembering:
+
+- **An 11th policy check, "funds held in the vault", instead of letting `release` revert.** Denials
+  must not revert (the kill-switch has to see every attempt — see "Denials do not revert" below);
+  an underfunded payment reverting inside the vault would roll back that record. Costs a
+  `CheckResult[10]` -> `[11]` change everywhere (contract, ABIs, frontend labels, scripts).
+- **The vault's router is set once**, by the deployer, after which it can never change. Otherwise the
+  deployer could later point the vault at a router that skips the policy engine, which would quietly
+  undo the whole point.
+- **`deposit` credits what actually arrived** (balance delta), not the requested amount.
+- **Spend is recorded before tokens move**, and `settlePayment`, `deposit`, `release` and `withdraw`
+  are all `nonReentrant`.
+
+Testing findings:
+
+- The first version of the reentrancy test passed with the router's guard removed — the vault's own
+  guard throws the *same* error, so it was catching the attack instead. Removing both guards made the
+  test fail (the attack succeeds), confirming it has teeth. Two independent layers, not one.
+- The existing 9 tests needed only their funding changed (deposit into the vault instead of minting
+  to the agent) and still pass; 14 new tests cover vault custody, the underfunded denial, one-shot
+  router setup, and a reentrant smart-contract agent. 23 total, all run on 2026-09-21. Foundry is
+  installed at `~/.foundry/bin` but isn't on the shell PATH here.
+- **Circle simulates a call before broadcasting it.** The bypass attempts (`demo:bypass`) never reach
+  the chain: Circle returns `FAILED (ESTIMATION_ERROR): execution reverted: 0x…` and broadcasts
+  nothing, so no gas is spent. The script decodes the revert selectors (`NotPrincipal`, `NotRouter`,
+  `ERC20InsufficientBalance`) into plain language. Side effect for the dashboard: these attempts
+  leave *no on-chain trace*, so they don't appear in the audit trail.
+
+Deployment and verification traps:
+
+- `forge verify-contract --verifier blockscout` against the explorer's Etherscan-style `/api` hit the
+  10-requests-per-~34-minutes limit partway through (six of eight contracts, and the two tokens were
+  cut off). Two identical contracts also printed "already verified" because Blockscout matches by
+  bytecode against the old deployment. The two tokens were verified by POSTing the compiler input
+  (`forge verify-contract --show-standard-json-input`) to the explorer's REST v2 endpoint
+  (`/api/v2/smart-contracts/<addr>/verification/via/standard-input`), which has no such limit. The
+  recipe is in `contracts/foundry.toml`.
+- Removed the stale Sepolia and local Anvil address entries: they're the vault-less 10-check
+  deployment and the new ABI can't decode their `preflight` output.
+
+What the vault does **not** fix: the agent can still move its native gas float; whoever controls the
+router's `setFxEscrow` (one owner key) can redirect funds in flight to the escrow; the principal can
+change limits instantly. These are in the README's "Known gaps".
+
 ## Circle developer-controlled wallets (circle-wallet/)
 
 Scaffolded before ever running against a real API key, so every SDK call had to be verified

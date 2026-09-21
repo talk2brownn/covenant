@@ -24,6 +24,11 @@ export const SettlementRouterAbi = [
         "internalType": "contract KillSwitch"
       },
       {
+        "name": "_vault",
+        "type": "address",
+        "internalType": "contract MandateVault"
+      },
+      {
         "name": "_fxEscrow",
         "type": "address",
         "internalType": "contract IFXEscrow"
@@ -126,8 +131,8 @@ export const SettlementRouterAbi = [
           },
           {
             "name": "checklist",
-            "type": "tuple[10]",
-            "internalType": "struct PolicyEngine.CheckResult[10]",
+            "type": "tuple[11]",
+            "internalType": "struct PolicyEngine.CheckResult[11]",
             "components": [
               {
                 "name": "id",
@@ -274,6 +279,19 @@ export const SettlementRouterAbi = [
     "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "vault",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract MandateVault"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "event",
     "name": "PaymentDenied",
     "inputs": [
@@ -302,8 +320,8 @@ export const SettlementRouterAbi = [
           },
           {
             "name": "checklist",
-            "type": "tuple[10]",
-            "internalType": "struct PolicyEngine.CheckResult[10]",
+            "type": "tuple[11]",
+            "internalType": "struct PolicyEngine.CheckResult[11]",
             "components": [
               {
                 "name": "id",
@@ -384,13 +402,7 @@ export const SettlementRouterAbi = [
   },
   {
     "type": "error",
-    "name": "SafeERC20FailedOperation",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
   }
 ] as const;

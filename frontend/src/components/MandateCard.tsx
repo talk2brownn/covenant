@@ -30,10 +30,33 @@ export function MandateCard({ agent, refreshOn, agentIsCircle }: Props) {
     query: { enabled: !!addresses, refetchInterval: 45000 },
   });
 
+  // The budget lives in the MandateVault, not in the agent's wallet — showing both makes the point
+  // that the agent itself can't move it: it holds nothing but gas.
+  const { data: vaultBalance, refetch: refetchVault } = useReadContract({
+    chainId,
+    address: addresses?.vault,
+    abi: abis.vault,
+    functionName: "balances",
+    args: [agent],
+    query: { enabled: !!addresses, refetchInterval: 45000 },
+  });
+  const { data: agentTokens, refetch: refetchAgentTokens } = useReadContract({
+    chainId,
+    address: mandate?.homeCurrency,
+    abi: abis.erc20,
+    functionName: "balanceOf",
+    args: [agent],
+    query: { enabled: !!mandate?.homeCurrency, refetchInterval: 45000 },
+  });
+
   useEffect(() => {
     // App.tsx's activityTick starts at 0 and only increments on real activity, so this skips
     // the redundant extra fetch on initial mount (useReadContract already fetches once itself).
-    if (refreshOn) refetch();
+    if (refreshOn) {
+      refetch();
+      refetchVault();
+      refetchAgentTokens();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshOn]);
 
@@ -90,6 +113,10 @@ export function MandateCard({ agent, refreshOn, agentIsCircle }: Props) {
         <dd className="mono">{agent}</dd>
         <dt>Agent wallet</dt>
         <dd>{agentIsCircle ? "Circle developer-controlled wallet — signs server-side" : "External wallet"}</dd>
+        <dt>Held in vault</dt>
+        <dd>{vaultBalance !== undefined ? fmt(vaultBalance) : "…"}</dd>
+        <dt>In the agent's wallet</dt>
+        <dd>{agentTokens !== undefined ? fmt(agentTokens) : "…"}</dd>
         <dt>Per-transaction cap</dt>
         <dd>{fmt(mandate.perTxLimit)}</dd>
         <dt>Restricted-mode cap</dt>

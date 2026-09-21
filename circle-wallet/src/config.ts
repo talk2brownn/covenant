@@ -18,12 +18,15 @@ export const ARC_CHAIN_ID = 5042002;
 // dRPC endpoint the frontend already fell back to. Override with ARC_RPC_URL in .env.
 export const ARC_RPC_URL = process.env.ARC_RPC_URL || "https://rpc.drpc.testnet.arc.io";
 
+// Vault-based stack, deployed 2026-09-21 (block 63289174). The first, vault-less stack from
+// 2026-08-30 is still on chain but unused — see README for its addresses.
 export const addresses = {
-  mandateRegistry: "0x1413981c976694E12C200985ed9f1D70cf2CAed9",
-  settlementRouter: "0xD8da95168Ba9eE8600c2373c853b664e207d7848",
-  killSwitch: "0x2600Fa1d3971E0992e0685795660C95774641e34",
-  usdc: "0x41A069bdB1fDE2b5ad54F2C96Cd38B5DA9e6808E",
-  cngn: "0x4220880B42Cc4EAE952078BC682B880D821C7b43",
+  mandateRegistry: "0x68E20b724F1003c2F3742d4BeD3b621A56A1f6aE",
+  settlementRouter: "0xB428b854D173fbd0AFBc67a9d87025AC487459AA",
+  killSwitch: "0x7D94c7c2c724dFA94586D4Fe5B5000E51820e99E",
+  vault: "0x2C8b2238d2Ef3353FC46DAD4de419bB78E63F742",
+  usdc: "0xf3B7f10DA1c19B228F0B06C100E09a258220D354",
+  cngn: "0xd9866831a0Cb2f526443D9c296E7a270CC9C9C05",
 } as const;
 
 // Same demo vendor addresses the frontend's quick-fill buttons use
@@ -47,10 +50,12 @@ export const mandateDefaults = {
   validDays: 30,
   maxSlippageBps: 100, // 1%
   category: "saas",
-  // What the fund step mints/sends to a new Circle wallet — well above perTxLimit so the demo
+  // What the principal deposits into the agent's vault — well above perTxLimit so the demo
   // payments are genuine in-policy approvals, not accidental denials.
   fundUsdcAmount: 1_000_000000n, // 1,000 USDC
-  fundNativeGasAmount: 2_000000000000000000n, // 2 native USDC (18 decimals on Arc) for gas
+  // The agent's only own balance is native gas (18 decimals on Arc). Kept small on purpose: it's
+  // the one thing the agent can still move by itself, and ~0.007 USDC covers a transaction.
+  fundNativeGasAmount: 500000000000000000n, // 0.5 native USDC
   demoPaymentAmount: 10_000000n, // 10 USDC — same-currency and FX demo payments
   demoDeniedAmount: 600_000000n, // 600 USDC — deliberately over the 500 USDC per-tx limit
 } as const;

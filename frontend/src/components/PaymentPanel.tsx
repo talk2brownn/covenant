@@ -66,18 +66,6 @@ export function PaymentPanel({ agent, onSettled, agentIsCircle }: Props) {
     query: { enabled: !!preflightArgs },
   });
 
-  const { data: allowance } = useReadContract({
-    chainId,
-    address: mandate?.homeCurrency,
-    abi: abis.erc20,
-    functionName: "allowance",
-    args: agent && addresses ? [agent, addresses.settlementRouter] : undefined,
-    query: { enabled: !!mandate?.homeCurrency && !!addresses },
-  });
-
-  const needsApproval = amountBaseUnits !== undefined && (allowance ?? 0n) < amountBaseUnits;
-
-  const { writeContract: approve, isPending: approving } = useWriteContract();
   const {
     writeContract: submitPayment,
     data: txHash,
@@ -96,7 +84,7 @@ export function PaymentPanel({ agent, onSettled, agentIsCircle }: Props) {
   const quote = preflight?.[2];
   const quotedSlippageBps = preflight?.[3];
 
-  const canSend = !!decision?.approved && !needsApproval && !!addresses;
+  const canSend = !!decision?.approved && !!addresses;
 
   const fillDemo = (kind: "same-currency" | "cross-currency" | "over-limit") => {
     setCounterparty(kind === "cross-currency" ? DEMO_VENDOR_CNGN : DEMO_VENDOR_USDC);
@@ -192,23 +180,6 @@ export function PaymentPanel({ agent, onSettled, agentIsCircle }: Props) {
         </div>
       ) : (
         <>
-          {needsApproval && mandate?.homeCurrency && (
-            <button
-              className="btn-secondary"
-              disabled={approving}
-              onClick={() =>
-                approve({
-                  address: mandate.homeCurrency,
-                  abi: abis.erc20,
-                  functionName: "approve",
-                  args: [addresses!.settlementRouter, amountBaseUnits ?? 0n],
-                })
-              }
-            >
-              {approving ? "Approving..." : "Approve router to spend home currency"}
-            </button>
-          )}
-
           <button
             className="btn-primary"
             disabled={!canSend || submitting || waitingForReceipt}

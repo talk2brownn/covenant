@@ -8,7 +8,6 @@
     "02-create-wallet": "tsx scripts/02-create-wallet.ts",
     "03-create-mandate": "tsx scripts/03-create-mandate.ts",
     "04-fund-wallet": "tsx scripts/04-fund-wallet.ts",
-    "05-approve-router": "tsx scripts/05-approve-router.ts",
     "06-settle-payment": "tsx scripts/06-settle-payment.ts",
     "status": "tsx scripts/07-check-status.ts",
     "new-agent": "tsx scripts/new-agent.ts",
@@ -19,7 +18,8 @@
     "demo:deny": "tsx scripts/09-denied-payment.ts",
     "demo:freeze": "tsx scripts/10-freeze-agent.ts",
     "demo:restore": "tsx scripts/11-restore-agent.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "demo:bypass": "tsx scripts/13-bypass-attempt.ts"
   },
   "dependencies": {
     "@circle-fin/developer-controlled-wallets": "latest",

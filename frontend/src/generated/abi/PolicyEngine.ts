@@ -12,6 +12,11 @@ export const PolicyEngineAbi = [
         "name": "_killSwitch",
         "type": "address",
         "internalType": "contract KillSwitch"
+      },
+      {
+        "name": "_vault",
+        "type": "address",
+        "internalType": "contract MandateVault"
       }
     ],
     "stateMutability": "nonpayable"
@@ -69,8 +74,8 @@ export const PolicyEngineAbi = [
           },
           {
             "name": "checklist",
-            "type": "tuple[10]",
-            "internalType": "struct PolicyEngine.CheckResult[10]",
+            "type": "tuple[11]",
+            "internalType": "struct PolicyEngine.CheckResult[11]",
             "components": [
               {
                 "name": "id",
@@ -116,6 +121,19 @@ export const PolicyEngineAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract MandateRegistry"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "vault",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract MandateVault"
       }
     ],
     "stateMutability": "view"

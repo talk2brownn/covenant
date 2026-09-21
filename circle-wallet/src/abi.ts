@@ -142,6 +142,38 @@ export const mockErc20Abi = [
     ],
     outputs: [{ name: "", type: "uint256" }],
   },
+  {
+    type: "function",
+    name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
+
+// MandateVault: custody for the agent's budget. Only the router can release; only the principal can
+// withdraw; anyone can deposit for an agent.
+export const vaultAbi = [
+  {
+    type: "function",
+    name: "balances",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "deposit",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agent", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 // KillSwitch.Status enum: 0 = Autonomous, 1 = Restricted, 2 = Frozen
@@ -186,6 +218,7 @@ export const CHECK_LABELS = [
   "Category approved",
   "Currency approved",
   "FX slippage within tolerance",
+  "Funds held in the vault",
 ] as const;
 
 export const routerEventsAbi = [
@@ -217,7 +250,7 @@ export const routerEventsAbi = [
           { name: "approved", type: "bool" },
           {
             name: "checklist",
-            type: "tuple[10]",
+            type: "tuple[11]",
             components: [
               { name: "id", type: "uint8" },
               { name: "passed", type: "bool" },

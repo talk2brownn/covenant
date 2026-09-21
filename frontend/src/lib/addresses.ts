@@ -5,52 +5,37 @@ export type CovenantAddresses = {
   mandateRegistry: `0x${string}`;
   policyEngine: `0x${string}`;
   killSwitch: `0x${string}`;
+  vault: `0x${string}`;
   fxEscrow: `0x${string}`;
   settlementRouter: `0x${string}`;
   usdc: `0x${string}`;
   cngn: `0x${string}`;
-  // Block the stack was deployed at. Audit-trail event queries start here instead of block 0 —
-  // on a real public chain like Sepolia, `eth_getLogs` from genesis exceeds the block-range limit
-  // most public RPC nodes enforce (e.g. 50,000 blocks), which silently breaks the audit trail.
-  // Local Anvil chains start near block 0, so 0n is fine there.
+  // Block the stack was deployed at. Audit-trail RPC fallbacks start here instead of block 0 — on a
+  // real public chain, `eth_getLogs` from genesis exceeds the block-range limit public RPC nodes
+  // enforce. Local Anvil chains start near block 0, so 0n is fine there.
   deployedAtBlock: bigint;
 };
 
 export const addressesByChainId: Record<number, CovenantAddresses> = {
-  // Anvil (chain id 31337) — from contracts/broadcast/Deploy.s.sol/31337/run-latest.json
-  31337: {
-    mandateRegistry: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    policyEngine: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-    killSwitch: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-    fxEscrow: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-    settlementRouter: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
-    usdc: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
-    cngn: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
-    deployedAtBlock: 0n,
-  },
-  // Ethereum Sepolia (chain id 11155111) — kept as a fallback public testnet.
-  // From contracts/broadcast/Deploy.s.sol/11155111/run-latest.json
-  11155111: {
-    mandateRegistry: "0x1413981c976694E12C200985ed9f1D70cf2CAed9",
-    policyEngine: "0x303B31C60381B992f3dfc09036859394c03F6ADD",
-    killSwitch: "0x2600Fa1d3971E0992e0685795660C95774641e34",
-    fxEscrow: "0xAB2d7fFe480A4456965359e3209BA3FdD420f86A",
-    settlementRouter: "0xD8da95168Ba9eE8600c2373c853b664e207d7848",
-    usdc: "0x41A069bdB1fDE2b5ad54F2C96Cd38B5DA9e6808E",
-    cngn: "0x4220880B42Cc4EAE952078BC682B880D821C7b43",
-    deployedAtBlock: 11603582n,
-  },
-  // Arc testnet (chain id 5042002) — the real target network. All 7 contracts verified on
-  // https://testnet.arcscan.app. From contracts/broadcast/Deploy.s.sol/5042002/run-latest.json
+  // Arc testnet (chain id 5042002) — the real target network. Vault-based stack deployed
+  // 2026-09-21; all eight contracts verified on https://explorer.testnet.arc.io. From
+  // contracts/broadcast/Deploy.s.sol/5042002/run-latest.json
+  //
+  // The first stack (deployed 2026-08-30, no vault, agents held their own tokens) is still on
+  // chain but unused: registry 0x1413981c976694E12C200985ed9f1D70cf2CAed9, router
+  // 0xD8da95168Ba9eE8600c2373c853b664e207d7848. Its 10-check ABI differs from the current 11-check
+  // one, so this dashboard can't show it. The Ethereum Sepolia and local Anvil entries were removed
+  // for the same reason — redeploy with the current Deploy.s.sol and add them back.
   5042002: {
-    mandateRegistry: "0x1413981c976694E12C200985ed9f1D70cf2CAed9",
-    policyEngine: "0x303B31C60381B992f3dfc09036859394c03F6ADD",
-    killSwitch: "0x2600Fa1d3971E0992e0685795660C95774641e34",
-    fxEscrow: "0xAB2d7fFe480A4456965359e3209BA3FdD420f86A",
-    settlementRouter: "0xD8da95168Ba9eE8600c2373c853b664e207d7848",
-    usdc: "0x41A069bdB1fDE2b5ad54F2C96Cd38B5DA9e6808E",
-    cngn: "0x4220880B42Cc4EAE952078BC682B880D821C7b43",
-    deployedAtBlock: 59745987n,
+    mandateRegistry: "0x68E20b724F1003c2F3742d4BeD3b621A56A1f6aE",
+    policyEngine: "0x0e45c5D783345baB9a12bdFE120E4a5B30Df4a5f",
+    killSwitch: "0x7D94c7c2c724dFA94586D4Fe5B5000E51820e99E",
+    vault: "0x2C8b2238d2Ef3353FC46DAD4de419bB78E63F742",
+    fxEscrow: "0xC2c8DdaE6627A4E38A4D8b173e5c4b942823636C",
+    settlementRouter: "0xB428b854D173fbd0AFBc67a9d87025AC487459AA",
+    usdc: "0xf3B7f10DA1c19B228F0B06C100E09a258220D354",
+    cngn: "0xd9866831a0Cb2f526443D9c296E7a270CC9C9C05",
+    deployedAtBlock: 63289174n,
   },
 };
 

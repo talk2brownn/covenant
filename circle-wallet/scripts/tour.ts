@@ -7,7 +7,7 @@ import readline from "node:readline/promises";
 const STEPS: { title: string; say: string; script: string }[] = [
   {
     title: "Starting point",
-    say: "A fresh Circle-managed agent with a mandate: 10,000 USDC budget, 500 per payment, approved vendors only.",
+    say: "A fresh Circle-managed agent. Its 1,000 USDC budget sits in a vault, not in its wallet. Mandate: 500 per payment, approved vendors only.",
     script: "07-check-status.ts",
   },
   {
@@ -26,22 +26,27 @@ const STEPS: { title: string; say: string; script: string }[] = [
     script: "12-unapproved-vendor.ts",
   },
   {
-    title: "4. Over the limit",
+    title: "4. The agent tries to steal from itself",
+    say: "Forget the router. The agent has a working wallet that can sign anything — it tries to transfer, withdraw, or release the money directly. Every route is closed: it holds no tokens, only the router can release, only the principal can withdraw.",
+    script: "13-bypass-attempt.ts",
+  },
+  {
+    title: "5. Over the limit",
     say: "600 USDC against a 500 cap. Denied, and the event names exactly which check failed.",
     script: "09-denied-payment.ts",
   },
   {
-    title: "5. Human hits the red button",
+    title: "6. Human hits the red button",
     say: "The principal freezes the agent. This is signed by the principal's key, not the agent's — the agent can never unfreeze itself.",
     script: "10-freeze-agent.ts",
   },
   {
-    title: "6. A perfectly valid payment, now blocked",
+    title: "7. A perfectly valid payment, now blocked",
     say: "Same payment as step 1. Nothing about it is wrong — the kill-switch stops it anyway.",
     script: "06-settle-payment.ts",
   },
   {
-    title: "7. Restore",
+    title: "8. Restore",
     say: "De-escalation is manual and principal-only — the state machine never heals itself.",
     script: "11-restore-agent.ts",
   },

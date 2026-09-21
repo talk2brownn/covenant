@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-const STEPS = ["Mandate", "Policy", "Router", "Settlement", "Explainability", "Kill-Switch"];
+const STEPS = ["Mandate", "Policy", "Router", "Vault", "Settlement", "Explainability", "Kill-Switch"];
 
 export function PipelineStrip() {
   return (

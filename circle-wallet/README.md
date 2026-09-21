@@ -20,8 +20,9 @@ can sign transactions that move funds — none of that may ship to a browser.
    secret it prints into `.env` as `CIRCLE_ENTITY_SECRET` and back up the recovery file it writes
    under `~/.circle/`.** Run this once per API key; running it again rotates the secret and orphans
    existing wallets.
-5. `npm run new-agent` — creates a wallet, mandate, funding and approval in one go (~40s). It
-   updates `.env` for you and prints a ready-to-open dashboard link.
+5. `npm run new-agent` — creates a wallet, its mandate, a small gas float, and a budget deposited into
+   the `MandateVault`, in one go (~40s). It updates `.env` for you and prints a ready-to-open
+   dashboard link. The agent's own wallet ends up holding no tokens — the budget is in the vault.
 
 ## Demo scenarios
 
@@ -29,13 +30,15 @@ can sign transactions that move funds — none of that may ship to a browser.
 waits for Enter, so nobody types commands on stage (`q` quits; `-- --auto` runs it unattended).
 Run `npm run new-agent` first so the mandate starts at 0 spent. The steps are the individual
 scenarios below, in the order that tells the story: starting point → same-currency → cross-currency
-→ prompt-injected payment to an unapproved address → over-limit → freeze → valid payment blocked →
+→ prompt-injected payment to an unapproved address → the agent tries to steal from itself →
+over-limit → freeze → valid payment blocked →
 restore → on-chain ground truth. About three minutes.
 
 ```bash
 npm run demo:same      # 10 USDC to an approved vendor          -> APPROVED
 npm run demo:fx        # 10 USDC, vendor settles in cNGN        -> APPROVED (14,925 cNGN, 0.50% spread)
 npm run demo:attacker  # 50 USDC to an unapproved address         -> DENIED: counterparty not approved
+npm run demo:bypass    # agent tries transfer / withdraw / release -> all BLOCKED, vault unchanged
 npm run demo:deny      # 600 USDC vs a 500 USDC per-tx limit     -> DENIED, names the failed check
 npm run demo:freeze    # the principal freezes the agent
 npm run demo:same      # a valid payment                        -> DENIED: kill-switch
@@ -49,9 +52,10 @@ never unfreeze itself.
 
 **Pace yourself:** the kill-switch counts attempts (approved or denied) in 5-minute windows and
 downgrades the agent to *Restricted* (per-tx cap drops to 100 USDC) at 5 attempts and *Frozen* at
-10. The guided tour makes 5 attempts, 4 of them before the freeze, so one extra attempt (a retry, a
+10. The guided tour makes 5 router attempts, 4 of them before the freeze (`demo:bypass` never reaches
+the router, so it doesn't count), so one extra attempt (a retry, a
 rehearsal click) inside the same five minutes tips it to Restricted. Wait five minutes between full runs or
-use `npm run new-agent`. Each new agent also costs the principal key ~2 testnet USDC in gas.
+use `npm run new-agent`. Each new agent costs the principal key ~0.7 testnet USDC (0.5 gas float plus setup gas).
 
 ## Why each script reads events
 
@@ -63,8 +67,17 @@ The scripts decode the router's `PaymentSettled` / `PaymentDenied` event and rep
 ## Step-by-step scripts
 
 `new-agent` is these in order: `02-create-wallet`, `03-create-mandate` (idempotent; also adds the
-cNGN vendor and currency approvals), `04-fund-wallet` (Arc gas + demo MockUSDC), `05-approve-router`
-(the agent approves the router as a spender — signed by Circle).
+cNGN vendor and currency approvals), `04-fund-wallet` (a 0.5 USDC gas float for the agent, then the
+principal mints demo MockUSDC and deposits it into the agent's vault). There is no router-approval
+step any more: the router pays out of the vault, so the agent never needs to approve anything.
+
+## Why the bypass demo fails at simulation
+
+`demo:bypass` has the agent's real Circle wallet try a direct token transfer, a vault withdrawal and a
+direct `release()`. Circle simulates a call before broadcasting it and rejects one that would revert
+(`FAILED (ESTIMATION_ERROR): execution reverted: 0x…`), so nothing is sent and no gas is spent. The
+script decodes the revert selector into words (`NotPrincipal`, `NotRouter`, `ERC20InsufficientBalance`).
+Because nothing reaches the chain, these attempts leave no trace in the dashboard's audit trail.
 
 ## Findings about the SDK (verified against the installed package, not the docs)
 

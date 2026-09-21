@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {MandateRegistry} from "./MandateRegistry.sol";
 import {PolicyEngine} from "./PolicyEngine.sol";
 import {KillSwitch} from "./KillSwitch.sol";
+import {MandateVault} from "./MandateVault.sol";
 import {IFXEscrow} from "./interfaces/IFXEscrow.sol";
 
 /// @title SettlementRouter
@@ -18,9 +18,7 @@ import {IFXEscrow} from "./interfaces/IFXEscrow.sol";
 ///         (repeated denials are themselves an anomaly signal — see KillSwitch's currency-probing
 ///         counter), so a denial is recorded on-chain via PaymentDenied and the function returns
 ///         `approved = false` instead of throwing away that state in a revert.
-contract SettlementRouter {
-    using SafeERC20 for IERC20;
-
+contract SettlementRouter is ReentrancyGuard {
     event PaymentSettled(
         address indexed agent,
         address indexed counterparty,
@@ -37,6 +35,7 @@ contract SettlementRouter {
     MandateRegistry public immutable registry;
     PolicyEngine public immutable policyEngine;
     KillSwitch public immutable killSwitch;
+    MandateVault public immutable vault;
     IFXEscrow public fxEscrow;
 
     address public owner;
@@ -51,11 +50,19 @@ contract SettlementRouter {
         _;
     }
 
-    constructor(address initialOwner, MandateRegistry _registry, PolicyEngine _policyEngine, KillSwitch _killSwitch, IFXEscrow _fxEscrow) {
+    constructor(
+        address initialOwner,
+        MandateRegistry _registry,
+        PolicyEngine _policyEngine,
+        KillSwitch _killSwitch,
+        MandateVault _vault,
+        IFXEscrow _fxEscrow
+    ) {
         owner = initialOwner;
         registry = _registry;
         policyEngine = _policyEngine;
         killSwitch = _killSwitch;
+        vault = _vault;
         fxEscrow = _fxEscrow;
     }
 
@@ -86,6 +93,7 @@ contract SettlementRouter {
     ///         counterparty is paid.
     function settlePayment(address agent, address counterparty, bytes32 category, address settlementToken, uint256 amount)
         external
+        nonReentrant
         returns (bool approved, uint256 settlementAmount, uint16 fxSpreadBps)
     {
         require(msg.sender == agent, "only agent may settle its own mandate");
@@ -109,16 +117,19 @@ contract SettlementRouter {
             return (false, 0, fxSpreadBps);
         }
 
+        // Effects before interactions: spend is recorded before any tokens move, so a callback during
+        // a transfer can never observe (or act on) limits that don't yet reflect this payment.
+        registry.recordSpend(agent, amount);
+
+        // The funds come out of the agent's vault balance — the agent's own wallet never holds them.
         if (requiresFx) {
-            IERC20(m.homeCurrency).safeTransferFrom(agent, address(fxEscrow), amount);
+            vault.release(agent, address(fxEscrow), amount);
             fxEscrow.settle(quote, counterparty);
             settlementAmount = quote.toAmount;
         } else {
-            IERC20(m.homeCurrency).safeTransferFrom(agent, counterparty, amount);
+            vault.release(agent, counterparty, amount);
             settlementAmount = amount;
         }
-
-        registry.recordSpend(agent, amount);
 
         emit PaymentSettled(agent, counterparty, category, settlementToken, amount, settlementAmount, requiresFx, fxSpreadBps);
         return (true, settlementAmount, fxSpreadBps);

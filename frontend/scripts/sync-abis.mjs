@@ -15,6 +15,7 @@ const contracts = [
   "KillSwitch",
   "MockFXEscrow",
   "SettlementRouter",
+  "MandateVault",
   "MockERC20",
 ];
 

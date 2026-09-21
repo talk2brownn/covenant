@@ -1,4 +1,4 @@
-import { keccak256, parseEventLogs, toBytes, type Address, type Hex } from "viem";
+import { keccak256, parseEventLogs, toBytes, toFunctionSelector, type Address, type Hex } from "viem";
 import {
   DEMO_VENDOR_CNGN,
   DEMO_VENDOR_USDC,
@@ -13,10 +13,11 @@ import {
   mockErc20Abi,
   routerEventsAbi,
   STATUS_LABELS,
+  vaultAbi,
 } from "./abi.js";
 import { formatCircleError, getCircleClient } from "./circleClient.js";
 import { waitForCompletion } from "./pollTransaction.js";
-import { getDeployerWalletClient, getPrincipalAddress, publicClient } from "./viemClient.js";
+import { getDeployerAccount, getDeployerWalletClient, getPrincipalAddress, publicClient } from "./viemClient.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const CATEGORY = keccak256(toBytes(mandateDefaults.category));
@@ -149,73 +150,130 @@ export async function ensureMandate(agent: Address) {
   }
 }
 
-// Native Arc gas (18 decimals) so the Circle wallet can pay for its own transactions, plus demo
-// MockUSDC — mint() is unrestricted (see contracts/src/mocks/MockERC20.sol), so any funded key
-// can mint it straight to the agent.
+// The agent gets a small native-gas float so the Circle wallet can pay for its own transactions —
+// and nothing else. Its budget goes into the MandateVault instead: the principal mints demo MockUSDC
+// (mint() is unrestricted, see contracts/src/mocks/MockERC20.sol) and deposits it for the agent, so
+// the agent's own wallet never holds a single token and can't move the budget except through the
+// router.
 export async function fundAgent(agent: Address) {
   const wallet = getDeployerWalletClient();
+  const funder = getDeployerAccount().address; // pays for the deposit; any address may fund a vault
 
   const nativeBalance = await publicClient.getBalance({ address: agent });
   if (nativeBalance >= mandateDefaults.fundNativeGasAmount) {
     console.log("Agent already has enough native gas — skipping gas transfer.");
   } else {
-    console.log("Sending native Arc gas to the agent...");
+    console.log("Sending the agent a small native-gas float...");
     await sendAndWait(await wallet.sendTransaction({ to: agent, value: mandateDefaults.fundNativeGasAmount }));
   }
 
-  const usdcBalance = await publicClient.readContract({
-    address: addresses.usdc,
-    abi: mockErc20Abi,
-    functionName: "balanceOf",
+  const vaultBalance = await publicClient.readContract({
+    address: addresses.vault,
+    abi: vaultAbi,
+    functionName: "balances",
     args: [agent],
   });
-  if (usdcBalance >= mandateDefaults.fundUsdcAmount) {
-    console.log("Agent already has enough MockUSDC — skipping mint.");
-  } else {
-    console.log("Minting demo MockUSDC to the agent...");
-    await sendAndWait(
-      await wallet.writeContract({
-        address: addresses.usdc,
-        abi: mockErc20Abi,
-        functionName: "mint",
-        args: [agent, mandateDefaults.fundUsdcAmount],
-      }),
-    );
+  if (vaultBalance >= mandateDefaults.fundUsdcAmount) {
+    console.log("Vault already holds enough for this agent — skipping deposit.");
+    return;
   }
-}
 
-// settlePayment does IERC20(homeCurrency).safeTransferFrom(agent, ...), so the agent must approve
-// the router as a spender — same as any ERC20 flow, just signed by the Circle wallet server-side.
-export async function approveRouter(walletId: string, agent: Address) {
+  console.log("Minting demo MockUSDC...");
+  await sendAndWait(
+    await wallet.writeContract({
+      address: addresses.usdc,
+      abi: mockErc20Abi,
+      functionName: "mint",
+      args: [funder, mandateDefaults.fundUsdcAmount],
+    }),
+  );
+
   const allowance = await publicClient.readContract({
     address: addresses.usdc,
     abi: mockErc20Abi,
     functionName: "allowance",
-    args: [agent, addresses.settlementRouter],
+    args: [funder, addresses.vault],
   });
-  if (allowance >= 2n ** 200n) {
-    console.log("Router already approved — skipping.");
-    return;
+  if (allowance < mandateDefaults.fundUsdcAmount) {
+    console.log("Approving the vault...");
+    await sendAndWait(
+      await wallet.writeContract({
+        address: addresses.usdc,
+        abi: mockErc20Abi,
+        functionName: "approve",
+        args: [addresses.vault, 2n ** 256n - 1n],
+      }),
+    );
   }
 
+  console.log("Depositing the budget into the agent's vault...");
+  await sendAndWait(
+    await wallet.writeContract({
+      address: addresses.vault,
+      abi: vaultAbi,
+      functionName: "deposit",
+      args: [agent, mandateDefaults.fundUsdcAmount],
+    }),
+  );
+}
+
+export async function readVaultBalance(agent: Address) {
+  return publicClient.readContract({ address: addresses.vault, abi: vaultAbi, functionName: "balances", args: [agent] });
+}
+
+export type AttemptResult =
+  | { moved: false; reason: string }
+  | { moved: true; txHash?: Hex };
+
+// The vault's and the token's custom errors, keyed by selector, so a refused call can say *why* in
+// plain words instead of printing raw revert data.
+const KNOWN_REVERTS: Record<string, string> = {
+  [toFunctionSelector("ERC20InsufficientBalance(address,uint256,uint256)")]:
+    "the agent's wallet holds no tokens (ERC20InsufficientBalance)",
+  [toFunctionSelector("NotPrincipal(address,address)")]:
+    "only the mandate's principal can withdraw (NotPrincipal)",
+  [toFunctionSelector("NotRouter(address)")]: "only the SettlementRouter can release funds (NotRouter)",
+};
+
+// Has the agent's own Circle wallet try to take money out by a route that skips the mandate. Any
+// outcome other than "the chain refused" is a failure of the vault, so it's reported as moved rather
+// than swallowed. Circle simulates a call before broadcasting it and rejects one that would revert
+// (state FAILED / ESTIMATION_ERROR) — nothing is ever sent, so no gas is spent and nothing moves.
+export async function attemptAsAgent(
+  walletId: string,
+  contractAddress: Address,
+  abiFunctionSignature: string,
+  abiParameters: (string | number)[],
+): Promise<AttemptResult> {
   const client = getCircleClient();
-  console.log("Agent approving the SettlementRouter (signed by Circle)...");
   let response;
   try {
     response = await client.createContractExecutionTransaction({
       walletId,
-      contractAddress: addresses.usdc,
-      abiFunctionSignature: "approve(address,uint256)",
-      abiParameters: [addresses.settlementRouter, (2n ** 256n - 1n).toString()],
+      contractAddress,
+      abiFunctionSignature,
+      abiParameters,
       fee: { type: "level", config: { feeLevel: "MEDIUM" } },
     });
   } catch (err) {
-    throw new Error(`approve failed: ${formatCircleError(err)}`);
+    return { moved: false, reason: formatCircleError(err).replace(/\s+/g, " ").slice(0, 200) };
   }
+
   const id = response.data?.id;
   if (!id) throw new Error(`No transaction id in response: ${JSON.stringify(response.data)}`);
-  const tx = await waitForCompletion(id);
-  if (tx?.state !== "COMPLETE") throw new Error(`approve did not complete: ${JSON.stringify(tx)}`);
+
+  try {
+    const done = await client.getTransaction({ id, waitForState: "COMPLETE" });
+    return { moved: true, txHash: done.data?.transaction?.txHash as Hex | undefined };
+  } catch (err) {
+    const message = String((err as Error)?.message ?? err);
+    const revertData = message.match(/execution reverted: (0x[0-9a-fA-F]{8})/)?.[1]?.toLowerCase();
+    const known = revertData ? KNOWN_REVERTS[revertData] : undefined;
+    return {
+      moved: false,
+      reason: known ?? message.replace(/\s+/g, " ").slice(0, 200),
+    };
+  }
 }
 
 export interface SettleParams {
