@@ -21,3 +21,6 @@ frontend/.env.*
 # OS / editor
 .DS_Store
 *.log
+
+# Private prep notes (candid audit, Q&A) — never commit
+docs/private/
